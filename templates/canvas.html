@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+
+<script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+<script src="/static/limit.js"></script>
+<script src="/static/visual-selector.js"></script>
+<link rel="stylesheet" href="/static/styles.css">
+
+<div id="include_filters"></div>
+<div id="selector-wrapper" style="display: none">
+    <!-- request the screenshot and get the element offset info ready -->
+    <!-- use img src ready load to know everything is ready to map out -->
+    <!-- @todo: maybe something interesting like a field to select 'elements that contain text... and their parents n' -->
+    <img id="selector-background" src="{{ screenshot_url }}"/>
+    <canvas id="selector-canvas"></canvas>
+</div>
+<div id="selector-current-xpath" style="overflow-x: hidden"><strong>Currently:</strong>&nbsp;<span class="text">Loading...</span></div>
