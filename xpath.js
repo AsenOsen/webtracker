@@ -77,7 +77,7 @@ const findUpTag = (el) => {
 // @todo - if it's SVG or IMG, go into image diff mode
 // %ELEMENTS% replaced at injection time because different interfaces use it with different settings
 var elements = window.document.querySelectorAll(ELEMENTS);
-var size_pos = [];
+var size_pos = {};
 // after page fetch, inject this JS
 // build a map of all elements and their positions (maybe that only include text?)
 var bbox;
@@ -136,17 +136,16 @@ for (var i = 0; i < elements.length; i++) {
     }
 
     // @todo Possible to ONLY list where it's clickable to save JSON xfer size
-    size_pos.push({
-        xpath: xpath_result,
+    size_pos[xpath_result] = {
         width: Math.round(bbox['width']),
         height: Math.round(bbox['height']),
         left: Math.floor(bbox['left']),
         top: Math.floor(bbox['top'])+scroll_y,
         text: elements[i].innerText,
-        tagName: (elements[i].tagName) ? elements[i].tagName.toLowerCase() : '',
-        tagtype: (elements[i].tagName == 'INPUT' && elements[i].type) ? elements[i].type.toLowerCase() : '',
-        isClickable: (elements[i].onclick) || window.getComputedStyle(elements[i]).cursor == "pointer"
-    });
+        //tagName: (elements[i].tagName) ? elements[i].tagName.toLowerCase() : '',
+        //tagtype: (elements[i].tagName == 'INPUT' && elements[i].type) ? elements[i].type.toLowerCase() : '',
+        //isClickable: (elements[i].onclick) || window.getComputedStyle(elements[i]).cursor == "pointer"
+    };
 
 }
 
@@ -198,13 +197,12 @@ if (include_filters.length) {
         }
 
         if (bbox && bbox['width'] > 0 && bbox['height'] > 0) {
-            size_pos.push({
-                xpath: f,
+            size_pos[f] = {
                 width: parseInt(bbox['width']),
                 height: parseInt(bbox['height']),
                 left: parseInt(bbox['left']),
                 top: parseInt(bbox['top'])+scroll_y
-            });
+            };
         }
     }
 }

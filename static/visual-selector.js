@@ -3,7 +3,7 @@
 
 $(document).ready(function () {
 
-    var current_selected_i = false;
+    var current_selected_xpath = false;
     var state_clicked = false;
 
     var c;
@@ -23,7 +23,7 @@ $(document).ready(function () {
     /*$('#visualselector-tab').click(function () {
         $("img#selector-background").off('load');
         state_clicked = false;
-        current_selected_i = false;
+        current_selected_xpath = false;
         bootstrap_visualselector();
     });*/
 
@@ -118,15 +118,13 @@ $(document).ready(function () {
         ctx.fillStyle = 'rgba(255,0,0, 0.1)';
         ctx.lineWidth = 3;
         console.log("scaling set  x: " + x_scale + " by y:" + y_scale);
-        $("#selector-current-xpath").css('max-width', selector_image_rect.width);
     }
 
     function reflow_selector() {
         $(window).resize(function () {
             set_scale();
-            highlight_current_selected_i();
+            highlight_current_selected_xpath();
         });
-        var selector_currnt_xpath_text = $("#selector-current-xpath span");
 
         set_scale();
 
@@ -139,11 +137,11 @@ $(document).ready(function () {
             // Find the first one that matches
             // @todo In the future paint all that match
             for (const c of current_default_xpath) {
-                for (var i = selector_data['size_pos'].length; i !== 0; i--) {
-                    if (selector_data['size_pos'][i - 1].xpath === c) {
+                for (var xpath in selector_data['size_pos']) {
+                    if (xpath === c) {
                         console.log("highlighting " + c);
-                        current_selected_i = i - 1;
-                        highlight_current_selected_i();
+                        current_selected_xpath = xpath;
+                        highlight_current_selected_xpath();
                         found = true;
                         break;
                     }
@@ -163,7 +161,7 @@ $(document).ready(function () {
                 return;
             }
             ctx.clearRect(0, 0, c.width, c.height);
-            current_selected_i = null;
+            current_selected_xpath = null;
 
             // Add in offset
             if ((typeof e.offsetX === "undefined" || typeof e.offsetY === "undefined") || (e.offsetX === 0 && e.offsetY === 0)) {
@@ -177,9 +175,9 @@ $(document).ready(function () {
             var found = null;
             var min_square = Infinity;
             ctx.fillStyle = 'rgba(205,0,0,0.35)';
-            for (var i = selector_data['size_pos'].length; i !== 0; i--) {
+            for (var xpath in selector_data['size_pos']) {
                 // draw all of them? let them choose somehow?
-                var sel = selector_data['size_pos'][i - 1];
+                var sel = selector_data['size_pos'][xpath];
                 // If we are in a bounding-box
                 if (e.offsetY > sel.top * y_scale && e.offsetY < sel.top * y_scale + sel.height * y_scale
                     &&
@@ -194,31 +192,25 @@ $(document).ready(function () {
                     // no need to keep digging
                     // @todo or, O to go out/up, I to go in
                     // or double click to go up/out the selector?
-                    current_selected_i = i - 1;
+                    current_selected_xpath = xpath;
                     min_square = sel.width * sel.height;
                     //break;
                 }
             }
 
-            set_current_selected_text(found);
             ctx.strokeRect(found.left * x_scale, found.top * y_scale, found.width * x_scale, found.height * y_scale);
             ctx.fillRect(found.left * x_scale, found.top * y_scale, found.width * x_scale, found.height * y_scale);
 
         }.debounce(5));
 
-        function set_current_selected_text(s) {
-            selector_currnt_xpath_text[0].innerHTML = s.xpath;
-            console.log(s.deepness + " --- " + s.id);
-        }
-
-        function highlight_current_selected_i() {
+        function highlight_current_selected_xpath() {
             if (state_clicked) {
                 state_clicked = false;
                 xctx.clearRect(0, 0, c.width, c.height);
                 return;
             }
 
-            var sel = selector_data['size_pos'][current_selected_i];
+            var sel = selector_data['size_pos'][current_selected_xpath];
             if (sel[0] == '/') {
                 // @todo - not sure just checking / is right
                 $("#include_filters").val('xpath:' + sel.xpath);
@@ -233,14 +225,13 @@ $(document).ready(function () {
             xctx.clearRect(sel.left * x_scale, sel.top * y_scale, sel.width * x_scale, sel.height * y_scale);
             xctx.strokeRect(sel.left * x_scale, sel.top * y_scale, sel.width * x_scale, sel.height * y_scale);
             state_clicked = true;
-            set_current_selected_text(sel);
             alert(sel.text)
 
         }
 
 
         $('#selector-canvas').bind('mousedown', function (e) {
-            highlight_current_selected_i();
+            highlight_current_selected_xpath();
         });
     }
 
