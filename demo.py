@@ -5,6 +5,32 @@ import json
 import hashlib
 import os
 
+class Storage:
+
+	def __init__(self):
+		try:
+			self.db = json.loads(open('static/sites.json', 'r').read())
+		except:
+			self.db = {}
+
+	def flush(self):
+		open('static/sites.json', 'w').write(json.dumps(self.db))
+
+	def add(self, url, useragent, key):
+		self.db[key] = {
+			"url": url,
+			"ua": useragent
+		}
+		self.flush()
+
+	def delete(self, key):
+		del self.db[key]
+		self.flush()
+
+	def get(self):
+		return self.db
+		
+
 class Fetcher:
 
 	def __init__(self, useragent):
@@ -26,8 +52,8 @@ class Fetcher:
 		    	accept_downloads=False
 		    	)
 		    page = context.new_page()
-		    page.set_default_navigation_timeout(self.waiting * 1000)
-		    page.set_default_timeout(self.waiting * 1000)
+		    page.set_default_navigation_timeout(10 * 1000)
+		    page.set_default_timeout(10 * 1000)
 		    page.on("console", lambda msg: print(f"Playwright console: {msg.type}: {msg.text} {msg.args}"))
 		    page.goto(url, wait_until='commit')
 		    #page.set_viewport_size({"width": 1280, "height": 1024})
@@ -35,7 +61,7 @@ class Fetcher:
 		    time.sleep(self.waiting)
 		    # without it page sometimes only partially loaded
 		    #page.set_viewport_size({"width": 1280, "height": 1024})
-		    screenshot = page.screenshot(full_page=True)
+		    screenshot = page.screenshot(full_page=True, type='jpeg', quality=50)
 		    xpath = page.evaluate("async () => {" + self.xpathjs + "}")
 		    context.close()
 		    browser.close()
@@ -50,29 +76,46 @@ class Fetcher:
 	def getKey(url):
 		return hashlib.md5(url.encode('utf-8')).hexdigest()
 
-	def run(self, url):
+	def fetch(self, url):
 		key = Fetcher.getKey(url)
 		ts = time.time()
 		screenshot, xpath = self._scrap(url)
-		os.makedirs(f"static/data/{key}", exist_ok=True)
-		open(f"static/data/{key}/xpath.{ts}.log","w").write(json.dumps(xpath))
-		open(f"static/data/{key}/screenshot.{ts}.png","wb").write(screenshot)
-		open(f"static/data/{key}/xpath.log","w").write(json.dumps(xpath))
-		open(f"static/data/{key}/screenshot.png","wb").write(screenshot)
+		os.makedirs(f"static/snapshots/{key}", exist_ok=True)
+		open(f"static/snapshots/{key}/xpath.{ts}.json","w").write(json.dumps(xpath))
+		open(f"static/snapshots/{key}/screenshot.{ts}.jpg","wb").write(screenshot)
+		open(f"static/snapshots/{key}/xpath.json","w").write(json.dumps(xpath))
+		open(f"static/snapshots/{key}/screenshot.jpg","wb").write(screenshot)
 
 app = Flask(__name__)
+storage = Storage()
+
 @app.route('/')
+def index():
+	return render_template("index.html", db=storage.get())
+@app.route('/view')
 def view():
-	key = Fetcher.getKey(request.args.get('site')) if request.args.get('site') else ""
-	return render_template("index.html", screenshot_url=f"/static/data/{key}/screenshot.png", key=key)
+	key = request.args.get('key') if request.args.get('key') else ""
+	return render_template("canvas.html", screenshot_url=f"/static/snapshots/{key}/screenshot.jpg", key=key)
 @app.route('/xpath')
 def xpath():
 	key = request.args.get('key') if request.args.get('key') else ""
-	return jsonify(json.loads(open(f"static/data/{key}/xpath.log").read()))
-@app.route('/fetch')
-def fetch():
-	fetcher = Fetcher(useragent=request.headers.get("User-Agent"))
-	site = request.args.get('site') if request.args.get('site') else ""
-	fetcher.run(site)
+	return jsonify(json.loads(open(f"static/snapshots/{key}/xpath.json").read()))
+@app.route('/add')
+def add():
+	useragent = request.headers.get("User-Agent")
+	url = (request.args.get('url') if request.args.get('url') else "").strip()
+	key = Fetcher.getKey(url)
+	storage.add(url, useragent, key)
+	return 'ok', 200
+@app.route('/del')
+def delete():
+	key = request.args.get('key') if request.args.get('key') else ""
+	storage.delete(key)
+	return 'ok', 200
+@app.route('/snapshot')
+def snapshot():
+	key = request.args.get('key') if request.args.get('key') else ""
+	info = storage.get()[key]
+	Fetcher(info['ua']).fetch(info['url'])
 	return 'ok', 200
 app.run(port=8080)
