@@ -5,7 +5,6 @@
 <script src="/static/visual-selector.js"></script>
 <link rel="stylesheet" href="/static/styles.css">
 
-<div id="include_filters"></div>
 <div id="selector-wrapper" style="display: none">
     <!-- request the screenshot and get the element offset info ready -->
     <!-- use img src ready load to know everything is ready to map out -->
@@ -13,4 +12,6 @@
     <img id="selector-background" src="{{ screenshot_url }}"/>
     <canvas id="selector-canvas"></canvas>
 </div>
+<input type="hidden" id="key" value="{{ key }}">
+<div id="include_filters"></div>
 <div id="selector-current-xpath" style="overflow-x: hidden"><strong>Currently:</strong>&nbsp;<span class="text">Loading...</span></div>

@@ -86,7 +86,7 @@ $(document).ready(function () {
         $('.fetching-update-notice').html("Fetching element data..");
 
         $.ajax({
-            url: "/xpath",
+            url: "/xpath?key="+$("#key").val(),
             context: document.body
         }).done(function (data) {
             $('.fetching-update-notice').html("Rendering..");
