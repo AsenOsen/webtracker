@@ -16,9 +16,10 @@ class Storage:
 	def flush(self):
 		open('static/sites.json', 'w').write(json.dumps(self.db))
 
-	def add(self, url, useragent, key):
+	def add(self, url, useragent, locale, key):
 		self.db[key] = {
 			"url": url,
+			'lc': locale,
 			"ua": useragent
 		}
 		self.flush()
@@ -33,10 +34,11 @@ class Storage:
 
 class Fetcher:
 
-	def __init__(self, useragent):
+	def __init__(self, useragent, locale):
 		self.xpathjs = open("xpath.js").read()
 		self.waiting = 3
 		self.ua = useragent
+		self.locale = locale
 		#self.ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
 		#self.ua = "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.5359.128 Mobile Safari/537.36"
 
@@ -45,7 +47,7 @@ class Fetcher:
 		with sync_playwright() as p:
 		    browser = p.chromium.connect_over_cdp("ws://localhost:3000")
 		    context = browser.new_context(
-		    	locale="en-US", 
+		    	locale=self.locale, 
 		    	user_agent=self.ua,
 		    	bypass_csp=True,
 		    	service_workers='block',
@@ -103,9 +105,10 @@ def xpath():
 @app.route('/add')
 def add():
 	useragent = request.headers.get("User-Agent")
+	locale = request.headers.get("Accept-Language")
 	url = (request.args.get('url') if request.args.get('url') else "").strip()
 	key = Fetcher.getKey(url)
-	storage.add(url, useragent, key)
+	storage.add(url, useragent, locale, key)
 	return 'ok', 200
 @app.route('/del')
 def delete():
@@ -116,6 +119,7 @@ def delete():
 def snapshot():
 	key = request.args.get('key') if request.args.get('key') else ""
 	info = storage.get()[key]
-	Fetcher(info['ua']).fetch(info['url'])
+	Fetcher(info['ua'], info['lc']).fetch(info['url'])
 	return 'ok', 200
 app.run(port=8080)
+
