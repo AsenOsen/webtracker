@@ -7,7 +7,6 @@
 // Lets hope the position doesnt change while we iterate the bbox's, but this is better than nothing
 
 var ELEMENTS = 'div,span,form,table,tbody,tr,td,a,p,ul,li,h1,h2,h3,h4,header,footer,section,article,aside,details,main,nav,section,summary,strong,dd,dt,dl,input';
-var include_filters='';
 var root = document.documentElement || document.body;
 var scroll_y=+root.scrollTop
 
@@ -147,64 +146,6 @@ for (var i = 0; i < elements.length; i++) {
         //isClickable: (elements[i].onclick) || window.getComputedStyle(elements[i]).cursor == "pointer"
     };
 
-}
-
-
-// Inject the current one set in the include_filters, which may be a CSS rule
-// used for displaying the current one in VisualSelector, where its not one we generated.
-if (include_filters.length) {
-    // Foreach filter, go and find it on the page and add it to the results so we can visualise it again
-    for (const f of include_filters) {
-        bbox = false;
-        q = false;
-
-        if (!f.length) {
-            console.log("xpath_element_scraper: Empty filter, skipping");
-            continue;
-        }
-
-        try {
-            // is it xpath?
-            if (f.startsWith('/') || f.startsWith('xpath:')) {
-                q = document.evaluate(f.replace('xpath:', ''), document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-            } else {
-                q = document.querySelector(f);
-            }
-        } catch (e) {
-            // Maybe catch DOMException and alert?
-            console.log("xpath_element_scraper: Exception selecting element from filter "+f);
-            console.log(e);
-        }
-
-        if (q) {
-            // #1231 - IN the case XPath attribute filter is applied, we will have to traverse up and find the element.
-            if (q.hasOwnProperty('getBoundingClientRect')) {
-                bbox = q.getBoundingClientRect();
-                console.log("xpath_element_scraper: Got filter element, scroll from top was " + scroll_y)
-            } else {
-                try {
-                    // Try and see we can find its ownerElement
-                    bbox = q.ownerElement.getBoundingClientRect();
-                    console.log("xpath_element_scraper: Got filter by ownerElement element, scroll from top was " + scroll_y)
-                } catch (e) {
-                    console.log("xpath_element_scraper: error looking up ownerElement")
-                }
-            }
-        }
-        
-        if(!q) {
-            console.log("xpath_element_scraper: filter element " + f + " was not found");
-        }
-
-        if (bbox && bbox['width'] > 0 && bbox['height'] > 0) {
-            size_pos[f] = {
-                width: parseInt(bbox['width']),
-                height: parseInt(bbox['height']),
-                left: parseInt(bbox['left']),
-                top: parseInt(bbox['top'])+scroll_y
-            };
-        }
-    }
 }
 
 // Window.width required for proper scaling in the frontend
