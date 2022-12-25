@@ -14,7 +14,7 @@ var scroll_y=+root.scrollTop
 // Include the getXpath script directly, easier than fetching
 function getxpath(e) {
         var n = e;
-        if (n && n.id) return '//*[@id="' + n.id + '"]';
+        //if (n && n.id) return '//*[@id="' + n.id + '"]';
         for (var o = []; n && Node.ELEMENT_NODE === n.nodeType;) {
             for (var i = 0, r = !1, d = n.previousSibling; d;) d.nodeType !== Node.DOCUMENT_TYPE_NODE && d.nodeName === n.nodeName && i++, d = d.previousSibling;
             for (d = n.nextSibling; d;) {
@@ -56,7 +56,7 @@ const findUpTag = (el) => {
         if (depth == 5) {
             break;
         }
-        if ('' !== r.id) {
+        /*if ('' !== r.id) {
             chained_css.unshift("#" + CSS.escape(r.id));
             final_selector = chained_css.join(' > ');
             // Be sure theres only one, some sites have multiples of the same ID tag :-(
@@ -64,9 +64,9 @@ const findUpTag = (el) => {
                 return final_selector;
             }
             return null;
-        } else {
+        } else {*/
             chained_css.unshift(r.tagName.toLowerCase());
-        }
+        /*}*/
         r = r.parentNode;
         depth += 1;
     }
