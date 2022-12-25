@@ -30,7 +30,35 @@ class Storage:
 
 	def get(self):
 		return self.db
-		
+
+
+class Snapshot:
+
+	def __init__(self):
+		pass
+
+	def save(self, key, xpath, screenshot):
+		ts = int(time.time())
+		os.makedirs(f"static/snapshots/{key}", exist_ok=True)
+		open(f"static/snapshots/{key}/xpath.{ts}.json","w").write(json.dumps(xpath))
+		open(f"static/snapshots/{key}/screenshot.{ts}.jpg","wb").write(screenshot)
+		open(f"static/snapshots/{key}/xpath.json","w").write(json.dumps(xpath))
+		open(f"static/snapshots/{key}/screenshot.jpg","wb").write(screenshot)
+		open(f"static/snapshots/{key}/points.inf","a").write(str(ts)+"\n")
+
+	def getXpathHistory(self, key, xpath):
+		points = open(f"static/snapshots/{key}/points.inf").read().split("\n")
+		xpathHistory = {}
+		for point in points:
+			if not point:
+				break
+			xpathData = json.loads(open(f"static/snapshots/{key}/xpath.{point}.json").read())
+			if xpath in xpathData['size_pos']:
+				xpathHistory[point] = xpathData['size_pos'][xpath]['text']
+			else:
+				xpathHistory[point] = None
+		return xpathHistory
+
 
 class Fetcher:
 
@@ -80,13 +108,9 @@ class Fetcher:
 
 	def fetch(self, url):
 		key = Fetcher.getKey(url)
-		ts = time.time()
 		screenshot, xpath = self._scrap(url)
-		os.makedirs(f"static/snapshots/{key}", exist_ok=True)
-		open(f"static/snapshots/{key}/xpath.{ts}.json","w").write(json.dumps(xpath))
-		open(f"static/snapshots/{key}/screenshot.{ts}.jpg","wb").write(screenshot)
-		open(f"static/snapshots/{key}/xpath.json","w").write(json.dumps(xpath))
-		open(f"static/snapshots/{key}/screenshot.jpg","wb").write(screenshot)
+		Snapshot().save(key, xpath, screenshot)
+		
 
 app = Flask(__name__)
 storage = Storage()
@@ -102,6 +126,12 @@ def view():
 def xpath():
 	key = request.args.get('key') if request.args.get('key') else ""
 	return jsonify(json.loads(open(f"static/snapshots/{key}/xpath.json").read()))
+@app.route('/history')
+def history():
+	key = request.args.get('key') if request.args.get('key') else ""
+	xpath = request.args.get('xpath') if request.args.get('xpath') else ""
+	history = Snapshot().getXpathHistory(key, xpath)
+	return jsonify(history)
 @app.route('/add')
 def add():
 	useragent = request.headers.get("User-Agent")

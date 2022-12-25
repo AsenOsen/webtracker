@@ -20,39 +20,6 @@ $(document).ready(function () {
     var selector_image_rect;
     var selector_data;
 
-    /*$('#visualselector-tab').click(function () {
-        $("img#selector-background").off('load');
-        state_clicked = false;
-        current_selected_xpath = false;
-        bootstrap_visualselector();
-    });*/
-
-    /*$(document).on('keydown', function (event) {
-        if ($("img#selector-background").is(":visible")) {
-            if (event.key == "Escape") {
-                state_clicked = false;
-                ctx.clearRect(0, 0, c.width, c.height);
-            }
-        }
-    });*/
-
-    // For when the page loads
-    /*if (!window.location.hash || window.location.hash != '#visualselector') {
-        $("img#selector-background").attr('src', '');
-        return;
-    }*/
-
-    // Handle clearing button/link
-    /*$('#clear-selector').on('click', function (event) {
-        if (!state_clicked) {
-            alert('Oops, Nothing selected!');
-        }
-        state_clicked = false;
-        ctx.clearRect(0, 0, c.width, c.height);
-        xctx.clearRect(0, 0, c.width, c.height);
-        $("#include_filters").val('');
-    });*/
-
 
     bootstrap_visualselector();
 
@@ -85,8 +52,11 @@ $(document).ready(function () {
         // Image is ready
         $('.fetching-update-notice').html("Fetching element data..");
 
-        $.ajax({
-            url: "/xpath?key="+$("#key").val(),
+        $.get({
+            url: "/xpath",
+            data: {
+                "key": $("#key").val()
+            },
             context: document.body
         }).done(function (data) {
             $('.fetching-update-notice').html("Rendering..");
@@ -213,9 +183,9 @@ $(document).ready(function () {
             var sel = selector_data['size_pos'][current_selected_xpath];
             if (sel[0] == '/') {
                 // @todo - not sure just checking / is right
-                $("#include_filters").val('xpath:' + sel.xpath);
+                $("#include_filters").val('xpath:' + current_selected_xpath);
             } else {
-                $("#include_filters").val(sel.xpath);
+                $("#include_filters").val(current_selected_xpath);
             }
             xctx.fillStyle = 'rgba(205,205,205,0.95)';
             xctx.strokeStyle = 'rgba(225,0,0,0.9)';
@@ -225,13 +195,25 @@ $(document).ready(function () {
             xctx.clearRect(sel.left * x_scale, sel.top * y_scale, sel.width * x_scale, sel.height * y_scale);
             xctx.strokeRect(sel.left * x_scale, sel.top * y_scale, sel.width * x_scale, sel.height * y_scale);
             state_clicked = true;
-            alert(sel.text)
 
+            $.get({
+                url: "/history",
+                data: {
+                    "key": $("#key").val(),
+                    "xpath": current_selected_xpath
+                }
+            }).done(function (data) {
+                var t = current_selected_xpath + "\n";
+                for(var key in data){
+                    t += "\n-----" + key + ":" + data[key];
+                }
+                alert(t);
+            });
         }
 
 
-        $('#selector-canvas').bind('mousedown', function (e) {
-            highlight_current_selected_xpath();
+        $('#selector-canvas').bind('click', function (e) {
+            highlight_current_selected_xpath(); 
         });
     }
 

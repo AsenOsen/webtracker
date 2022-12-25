@@ -6,7 +6,7 @@
 // will automatically force a scroll somewhere, so include the position offset
 // Lets hope the position doesnt change while we iterate the bbox's, but this is better than nothing
 
-var ELEMENTS = 'div,span,form,table,tbody,tr,td,a,p,ul,li,h1,h2,h3,h4,header,footer,section,article,aside,details,main,nav,section,summary,strong,dd,dt,dl';
+var ELEMENTS = 'div,span,form,table,tbody,tr,td,a,p,ul,li,h1,h2,h3,h4,header,footer,section,article,aside,details,main,nav,section,summary,strong,dd,dt,dl,input';
 var include_filters='';
 var root = document.documentElement || document.body;
 var scroll_y=+root.scrollTop
@@ -141,7 +141,7 @@ for (var i = 0; i < elements.length; i++) {
         height: Math.round(bbox['height']),
         left: Math.floor(bbox['left']),
         top: Math.floor(bbox['top'])+scroll_y,
-        text: elements[i].innerText,
+        text: elements[i].innerText || elements[i].value,
         //tagName: (elements[i].tagName) ? elements[i].tagName.toLowerCase() : '',
         //tagtype: (elements[i].tagName == 'INPUT' && elements[i].type) ? elements[i].type.toLowerCase() : '',
         //isClickable: (elements[i].onclick) || window.getComputedStyle(elements[i]).cursor == "pointer"
