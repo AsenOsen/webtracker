@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, request
 from playwright.sync_api import sync_playwright
+import datetime
 import time
 import json
 import hashlib
@@ -38,7 +39,7 @@ class Snapshot:
 		pass
 
 	def save(self, key, xpath, screenshot):
-		ts = int(time.time())
+		ts = int(datetime.datetime.utcnow().timestamp())
 		os.makedirs(f"static/snapshots/{key}", exist_ok=True)
 		open(f"static/snapshots/{key}/xpath.{ts}.json","w").write(json.dumps(xpath))
 		open(f"static/snapshots/{key}/screenshot.{ts}.jpg","wb").write(screenshot)
@@ -149,7 +150,8 @@ def delete():
 def snapshot():
 	key = request.args.get('key') if request.args.get('key') else ""
 	info = storage.get()[key]
+	start = time.time()
 	Fetcher(info['ua'], info['lc']).fetch(info['url'])
-	return 'ok', 200
-app.run(port=8080)
+	return f"ok, took {time.time()-start} sec", 200
+app.run(host="0.0.0.0", port=8080)
 
