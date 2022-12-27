@@ -5,6 +5,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tingle/0.8.4/tingle.min.css" />
 <script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js"></script>
 
 <style type="text/css">
     #selector-wrapper {
@@ -91,20 +92,17 @@ function openModal(data)
     });
     modal.open();
 
-    var chartDataX = [];
-    var chartDataY = [];
-    for(var ts in data){
+    var chartData = {};
+    for(var ts in data) {
         var key = moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm");
-        var val = parseInt((data[ts] || "").replaceAll(",","").replaceAll(" ","")) || 0
-        chartDataX.push(key);
-        chartDataY.push(val);
+        var val = numeral(data[ts]).value() || 0;
+        chartData[key] = val;
     }
-    console.log(chartDataX);
-    console.log(chartDataY);
+    console.log(chartData);
     Plotly.newPlot('chart', [
         {
-            x: chartDataX,
-            y: chartDataY,
+            x: Object.keys(chartData),
+            y: Object.values(chartData),
             type: 'bar'
         }
     ]);
@@ -295,6 +293,7 @@ $(document).ready(function () {
             xctx.strokeRect(sel.left * x_scale, sel.top * y_scale, sel.width * x_scale, sel.height * y_scale);
             state_clicked = true;
 
+            console.log(numeral(sel.text));
             $.get({
                 url: "/history",
                 data: {
@@ -302,10 +301,6 @@ $(document).ready(function () {
                     "xpath": current_selected_xpath
                 }
             }).done(function (data) {
-                /*var t = current_selected_xpath + "\n";
-                for(var key in data){
-                    t += "\n-----" + key + ":" + data[key];
-                }*/
                 openModal(data);
             });
         }
