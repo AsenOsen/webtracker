@@ -3,7 +3,7 @@
 <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tingle/0.8.4/tingle.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tingle/0.8.4/tingle.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 
 <style type="text/css">
@@ -34,7 +34,7 @@
 </div>
 <div id="modal" style="display: none">
     <div>
-        <canvas id="tendency" style="width:100%"></canvas>
+        <div id="chart" style="width:100%"></div>
     </div>
 </div>
 
@@ -83,33 +83,31 @@ function openModal(data)
         }
     });
     modal.setContent($("#modal").html());
-    modal.addFooterBtn('Button label', 'tingle-btn tingle-btn--primary', function() {
+    modal.addFooterBtn('As tendency graph', 'tingle-btn tingle-btn--primary', function() {
         modal.close();
     });
-    modal.addFooterBtn('Dangerous action !', 'tingle-btn tingle-btn--danger', function() {
+    modal.addFooterBtn('As changes history', 'tingle-btn tingle-btn--danger', function() {
         modal.close();
     });
     modal.open();
 
-    var chartData = [];
+    var chartDataX = [];
+    var chartDataY = [];
     for(var ts in data){
-        var key = moment.unix(parseInt(ts)).format("MM/DD/YY HH:mm");
+        var key = moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm");
         var val = parseInt((data[ts] || "").replaceAll(",","").replaceAll(" ","")) || 0
-        chartData.push({x: key, y: val});
+        chartDataX.push(key);
+        chartDataY.push(val);
     }
-
-    new Chart(document.getElementById('tendency'), {
-        type: 'bar',
-        data: {
-            labels: chartData.map(row => row.x),
-            datasets: [
-                {
-                    label: 'Tendency',
-                    data: chartData.map(row => row.y)
-                }
-            ]
+    console.log(chartDataX);
+    console.log(chartDataY);
+    Plotly.newPlot('chart', [
+        {
+            x: chartDataX,
+            y: chartDataY,
+            type: 'bar'
         }
-    });
+    ]);
 }
 
 $(document).ready(function () {
