@@ -7,8 +7,6 @@
 // Lets hope the position doesnt change while we iterate the bbox's, but this is better than nothing
 
 var ELEMENTS = 'div,span,form,table,tbody,tr,td,a,p,ul,li,h1,h2,h3,h4,header,footer,section,article,aside,details,main,nav,section,summary,strong,dd,dt,dl,input';
-var root = document.documentElement || document.body;
-var scroll_y=+root.scrollTop
 
 // Include the getXpath script directly, easier than fetching
 function getxpath(e) {
@@ -72,81 +70,91 @@ const findUpTag = (el) => {
     return null;
 }
 
+function xpath_start() {
+    var root = document.documentElement || document.body;
+    var scroll_y =+ root.scrollTop
+    // @todo - if it's SVG or IMG, go into image diff mode
+    // %ELEMENTS% replaced at injection time because different interfaces use it with different settings
+    var elements = window.document.querySelectorAll(ELEMENTS);
+    var size_pos = {};
+    var geometryFingerprint = '';
+    // after page fetch, inject this JS
+    // build a map of all elements and their positions (maybe that only include text?)
+    var bbox;
+    for (var i = 0; i < elements.length; i++) {
+        bbox = elements[i].getBoundingClientRect();
 
-// @todo - if it's SVG or IMG, go into image diff mode
-// %ELEMENTS% replaced at injection time because different interfaces use it with different settings
-var elements = window.document.querySelectorAll(ELEMENTS);
-var size_pos = {};
-// after page fetch, inject this JS
-// build a map of all elements and their positions (maybe that only include text?)
-var bbox;
-for (var i = 0; i < elements.length; i++) {
-    bbox = elements[i].getBoundingClientRect();
-
-    // Exclude items that are not interactable or visible
-    if(elements[i].style.opacity === "0") {
-        continue
-    }
-    if(elements[i].style.display === "none" || elements[i].style.pointerEvents === "none" ) {
-        continue
-    }
-
-    // Forget really small ones
-    if (bbox['width'] < 10 && bbox['height'] < 10) {
-        continue;
-    }
-
-    // Don't include elements that are offset from canvas
-    if (bbox['top']+scroll_y < 0 || bbox['left'] < 0) {
-        continue;
-    }
-
-    // @todo the getXpath kind of sucks, it doesnt know when there is for example just one ID sometimes
-    // it should not traverse when we know we can anchor off just an ID one level up etc..
-    // maybe, get current class or id, keep traversing up looking for only class or id until there is just one match
-
-    // 1st primitive - if it has class, try joining it all and select, if theres only one.. well thats us.
-    xpath_result = false;
-
-    try {
-        var d = findUpTag(elements[i]);
-        if (d) {
-            xpath_result = d;
+        // Exclude items that are not interactable or visible
+        if(elements[i].style.opacity === "0") {
+            continue
         }
-    } catch (e) {
-        console.log(e);
-    }
+        if(elements[i].style.display === "none" || elements[i].style.pointerEvents === "none" ) {
+            continue
+        }
 
-    // You could swap it and default to getXpath and then try the smarter one
-    // default back to the less intelligent one
-    if (!xpath_result) {
-        try {
-            // I've seen on FB and eBay that this doesnt work
-            // ReferenceError: getXPath is not defined at eval (eval at evaluate (:152:29), <anonymous>:67:20) at UtilityScript.evaluate (<anonymous>:159:18) at UtilityScript.<anonymous> (<anonymous>:1:44)
-            xpath_result = getxpath(elements[i]);
-        } catch (e) {
-            console.log(e);
+        // Forget really small ones
+        if (bbox['width'] < 10 && bbox['height'] < 10) {
             continue;
         }
+
+        // Don't include elements that are offset from canvas
+        if (bbox['top']+scroll_y < 0 || bbox['left'] < 0) {
+            continue;
+        }
+
+        // @todo the getXpath kind of sucks, it doesnt know when there is for example just one ID sometimes
+        // it should not traverse when we know we can anchor off just an ID one level up etc..
+        // maybe, get current class or id, keep traversing up looking for only class or id until there is just one match
+
+        // 1st primitive - if it has class, try joining it all and select, if theres only one.. well thats us.
+        xpath_result = false;
+
+        try {
+            var d = findUpTag(elements[i]);
+            if (d) {
+                xpath_result = d;
+            }
+        } catch (e) {
+            console.log(e);
+        }
+
+        // You could swap it and default to getXpath and then try the smarter one
+        // default back to the less intelligent one
+        if (!xpath_result) {
+            try {
+                // I've seen on FB and eBay that this doesnt work
+                // ReferenceError: getXPath is not defined at eval (eval at evaluate (:152:29), <anonymous>:67:20) at UtilityScript.evaluate (<anonymous>:159:18) at UtilityScript.<anonymous> (<anonymous>:1:44)
+                xpath_result = getxpath(elements[i]);
+            } catch (e) {
+                console.log(e);
+                continue;
+            }
+        }
+
+        if (window.getComputedStyle(elements[i]).visibility === "hidden") {
+            continue;
+        }
+
+        // @todo Possible to ONLY list where it's clickable to save JSON xfer size
+        var w = Math.round(bbox['width']);
+        var h = Math.round(bbox['height']);
+        var l = Math.floor(bbox['left']);
+        var t = Math.floor(bbox['top'])+scroll_y;
+        size_pos[xpath_result] = {
+            width: w,
+            height: h,
+            left: l,
+            top: t,
+            text: elements[i].innerText || elements[i].value
+        };
+        // also we could add "text" into fingerprint, but it requires to determine first what is better:
+        // wait for dynamic content (more frequent case therefore can be endless) or wait for dynamic geometry (less frequent case) 
+        geometryFingerprint += xpath_result+":"+w+":"+h+":"+l+":"+t+";";
+
     }
 
-    if (window.getComputedStyle(elements[i]).visibility === "hidden") {
-        continue;
-    }
-
-    // @todo Possible to ONLY list where it's clickable to save JSON xfer size
-    size_pos[xpath_result] = {
-        width: Math.round(bbox['width']),
-        height: Math.round(bbox['height']),
-        left: Math.floor(bbox['left']),
-        top: Math.floor(bbox['top'])+scroll_y,
-        text: elements[i].innerText || elements[i].value,
-        //tagName: (elements[i].tagName) ? elements[i].tagName.toLowerCase() : '',
-        //tagtype: (elements[i].tagName == 'INPUT' && elements[i].type) ? elements[i].type.toLowerCase() : '',
-        //isClickable: (elements[i].onclick) || window.getComputedStyle(elements[i]).cursor == "pointer"
-    };
-
+    // Window.width required for proper scaling in the frontend
+    return {'xpath': size_pos, 'fingerprint':geometryFingerprint, 'browser_width': window.innerWidth};
 }
 
-// Window.width required for proper scaling in the frontend
-return {'size_pos': size_pos, 'browser_width': window.innerWidth};
+return xpath_start();

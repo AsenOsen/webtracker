@@ -199,7 +199,7 @@ $(document).ready(function () {
 
         set_scale();
 
-        console.log(selector_data['size_pos'].length + " selectors found");
+        console.log(selector_data['xpath'].length + " selectors found");
 
         // highlight the default one if we can find it in the xPath list
         // or the xpath matches the default one
@@ -208,7 +208,7 @@ $(document).ready(function () {
             // Find the first one that matches
             // @todo In the future paint all that match
             for (const c of current_default_xpath) {
-                for (var xpath in selector_data['size_pos']) {
+                for (var xpath in selector_data['xpath']) {
                     if (xpath === c) {
                         console.log("highlighting " + c);
                         current_selected_xpath = xpath;
@@ -246,16 +246,13 @@ $(document).ready(function () {
             var found = null;
             var min_square = Infinity;
             ctx.fillStyle = 'rgba(205,0,0,0.35)';
-            for (var xpath in selector_data['size_pos']) {
+            for (var xpath in selector_data['xpath']) {
                 // draw all of them? let them choose somehow?
-                var sel = selector_data['size_pos'][xpath];
+                var sel = selector_data['xpath'][xpath];
                 // If we are in a bounding-box
-                if (e.offsetY > sel.top * y_scale && e.offsetY < sel.top * y_scale + sel.height * y_scale
-                    &&
-                    e.offsetX > sel.left * y_scale && e.offsetX < sel.left * y_scale + sel.width * y_scale
-                    &&
-                    sel.width * sel.height < min_square
-                ) {
+                var intersected = (e.offsetY > sel.top * y_scale && e.offsetY < sel.top * y_scale + sel.height * y_scale) 
+                    && (e.offsetX > sel.left * y_scale && e.offsetX < sel.left * y_scale + sel.width * y_scale);
+                if (intersected && sel.width * sel.height < min_square) {
 
                     // FOUND ONE
                     found = sel;
@@ -283,7 +280,7 @@ $(document).ready(function () {
                 return;
             }
 
-            var sel = selector_data['size_pos'][current_selected_xpath];
+            var sel = selector_data['xpath'][current_selected_xpath];
             xctx.fillStyle = 'rgba(205,205,205,0.95)';
             xctx.strokeStyle = 'rgba(225,0,0,0.9)';
             xctx.lineWidth = 3;

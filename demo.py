@@ -54,8 +54,8 @@ class Snapshot:
 			if not point:
 				break
 			xpathData = json.loads(open(f"static/snapshots/{key}/xpath.{point}.json").read())
-			if xpath in xpathData['size_pos']:
-				xpathHistory[point] = xpathData['size_pos'][xpath]['text']
+			if xpath in xpathData['xpath']:
+				xpathHistory[point] = xpathData['xpath'][xpath]['text']
 			else:
 				xpathHistory[point] = None
 		return xpathHistory
@@ -65,7 +65,7 @@ class Fetcher:
 
 	def __init__(self, useragent, locale):
 		self.xpathjs = open("xpath.js").read()
-		self.waiting = 3
+		self.timeoutSec = 20
 		self.ua = useragent
 		self.locale = locale
 		#self.ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"
@@ -83,17 +83,33 @@ class Fetcher:
 		    	accept_downloads=False
 		    	)
 		    page = context.new_page()
-		    page.set_default_navigation_timeout(10 * 1000)
-		    page.set_default_timeout(10 * 1000)
+		    page.set_default_navigation_timeout(30 * 1000)
+		    page.set_default_timeout(30 * 1000)
 		    page.on("console", lambda msg: print(f"Playwright console: {msg.type}: {msg.text} {msg.args}"))
 		    page.goto(url, wait_until='commit')
-		    #page.set_viewport_size({"width": 1280, "height": 1024})
-		    # some sites need a lot of time to warm up
-		    time.sleep(self.waiting)
-		    # without it page sometimes only partially loaded
-		    #page.set_viewport_size({"width": 1280, "height": 1024})
-		    screenshot = page.screenshot(full_page=True, type='jpeg', quality=50)
-		    xpath = page.evaluate("async () => {" + self.xpathjs + "}")
+		    #page.set_viewport_size({"width": 1280, "height": 1024})		
+		    # wait while xpath data will stay unchanged between 2 runs
+		    xpath, screenshot = None, None
+		    start = time.time()
+		    while True:
+		    	time.sleep(1);
+		    	new_xpath = page.evaluate("async () => {" + self.xpathjs + "}")
+		    	# too long, probably page with dynamic content
+		    	if time.time() - start > self.timeoutSec:
+		    		xpath = new_xpath
+		    		screenshot = page.screenshot(full_page=True, type='jpeg', quality=50)
+		    		break
+		    	# paged is loaded if no changes in xpath detected since last check
+		    	if xpath and new_xpath['fingerprint'] == xpath['fingerprint']:    		
+		    		# only if page loaded, make screenshot
+		    		screenshot = page.screenshot(full_page=True, type='jpeg', quality=50)
+		    		# and verify that xpath stays unchanged after screenshot
+		    		if page.evaluate("async () => {" + self.xpathjs + "}")['fingerprint'] == xpath['fingerprint']:
+			    		break
+			    	else:
+			    		xpath = None
+		    	xpath = new_xpath
+		    del xpath['fingerprint']
 		    context.close()
 		    browser.close()
 		return [screenshot, xpath]
