@@ -6,7 +6,7 @@
 // will automatically force a scroll somewhere, so include the position offset
 // Lets hope the position doesnt change while we iterate the bbox's, but this is better than nothing
 
-var ELEMENTS = 'div,span,form,table,tbody,tr,td,a,p,ul,li,h1,h2,h3,h4,header,footer,section,article,aside,details,main,nav,section,summary,strong,dd,dt,dl,input';
+var ELEMENTS = 'div,span,form,table,tbody,tr,td,a,p,ul,li,h1,h2,h3,h4,header,footer,section,article,aside,details,main,nav,section,summary,strong,dd,dt,dl,input,nobr';
 
 // Include the getXpath script directly, easier than fetching
 function getxpath(e) {
@@ -147,7 +147,7 @@ function xpath_start() {
             top: t,
             text: elements[i].innerText || elements[i].value
         };
-        // also we could add "text" into fingerprint, but it requires to determine first what is better:
+        // TODO: also we could add "text" into fingerprint, but it requires to determine first what is better:
         // wait for dynamic content (more frequent case therefore can be endless) or wait for dynamic geometry (less frequent case) 
         geometryFingerprint += xpath_result+":"+w+":"+h+":"+l+":"+t+";";
 

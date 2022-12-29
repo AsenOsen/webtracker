@@ -3,7 +3,6 @@
 - browser locale (IP-based language site)
 - roll in repeatitive texts in same tag
 - text cleaner on click (user remove text lines)
-- find digit extractor lib from mixed text
 
 # ToDo
 
