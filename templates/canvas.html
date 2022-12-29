@@ -35,6 +35,7 @@
 </div>
 <div id="modal" style="display: none">
     <div>
+        <div id="chartTitle"></div>
         <div id="chart" style="width:100%"></div>
     </div>
 </div>
@@ -90,22 +91,54 @@ function openModal(data)
     modal.addFooterBtn('As changes history', 'tingle-btn tingle-btn--danger', function() {
         modal.close();
     });
-    modal.open();
 
-    var chartData = {};
+    var chartDataNumeral = {};
+    var chartDataTextual = {};
+    var digitsCount = 0;
     for(var ts in data) {
-        var key = moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm");
-        var val = numeral(data[ts]).value() || 0;
-        chartData[key] = val;
+        var dateTime = moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm");
+        var yNumeral = numeral(data[ts]).value();
+        if(yNumeral != null && !isNaN(yNumeral)){
+            digitsCount += 1;
+        }
+        chartDataNumeral[dateTime] = yNumeral || 0;
+        chartDataTextual[dateTime] = data[ts];
     }
-    console.log(chartData);
-    Plotly.newPlot('chart', [
+
+    var digitPercentage = digitsCount / Object.keys(chartDataNumeral).length;
+    var isDigitalGraph = digitPercentage >= 0.5
+    var chartData = {};
+
+    // TODO: algorithm of determining whether graph should be digital or textual
+    // can be better: if numeral`ed digit is not substr`ed within contents
+    // maybe it is better to build graph as changes graph (requires research) 
+    if(isDigitalGraph) {
+        chartData = chartDataNumeral;
+    } else {
+        var changesCounter = 0;
+        var prevText = "<random data>";
+        for(var key in chartDataTextual){
+            var newText = chartDataTextual[key];
+            if(newText != prevText) {
+                changesCounter += 1;
+            }
+            chartData[key] = changesCounter;
+            prevText = newText;
+        }
+    }
+
+    //console.log(chartData);
+    var data = [
         {
             x: Object.keys(chartData),
             y: Object.values(chartData),
-            type: 'bar'
+            type: 'line'
         }
-    ]);
+    ];
+    $("#chartTitle").text(isDigitalGraph ? "Tendency" : "Changes");
+    modal.open();
+    Plotly.newPlot('chart', data);
+    
 }
 
 $(document).ready(function () {
