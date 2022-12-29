@@ -6,6 +6,8 @@
 <script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
 <script src="//cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/diff2html@2.9.0/dist/diff2html.min.js"></script>
 
 <style type="text/css">
     #selector-wrapper {
@@ -37,6 +39,8 @@
     <div>
         <div id="chartTitle"></div>
         <div id="chart" style="width:100%"></div>
+        <table id="changes" style="width:100%" border="1">
+        </table>
     </div>
 </div>
 
@@ -85,10 +89,10 @@ function openModal(data)
         }
     });
     modal.setContent($("#modal").html());
-    modal.addFooterBtn('As tendency graph', 'tingle-btn tingle-btn--primary', function() {
+    modal.addFooterBtn('As tendency', 'tingle-btn tingle-btn--primary', function() {
         modal.close();
     });
-    modal.addFooterBtn('As changes history', 'tingle-btn tingle-btn--danger', function() {
+    modal.addFooterBtn('As changes', 'tingle-btn tingle-btn--danger', function() {
         modal.close();
     });
 
@@ -105,6 +109,7 @@ function openModal(data)
         chartDataTextual[dateTime] = data[ts];
     }
 
+    var labels = Object.values(chartDataTextual).map(x => String(x).substr(0,50));
     var digitPercentage = digitsCount / Object.keys(chartDataNumeral).length;
     var isDigitalGraph = digitPercentage >= 0.5
     var chartData = {};
@@ -116,14 +121,41 @@ function openModal(data)
         chartData = chartDataNumeral;
     } else {
         var changesCounter = 0;
-        var prevText = "<random data>";
+        var prevText = null;
+        var table = $("#changes");
         for(var key in chartDataTextual){
             var newText = chartDataTextual[key];
-            if(newText != prevText) {
+            if(newText != prevText && prevText != null) {
                 changesCounter += 1;
             }
             chartData[key] = changesCounter;
+            newText = newText||"";
+            if (prevText == null){
+                prevText = newText;
+            }
+            var diff = Diff.diffLines(prevText, newText);
             prevText = newText;
+
+            var diffHtml = $("<div></div>");
+            var changed = false;
+            diff.forEach((part) => {
+                changed |= (part.added || part.removed);
+              const color = part.added ? 'green' :
+                part.removed ? 'red' : 'black';
+              var span = $("<span>" + part.value + "</span>");
+              $(span).css('color', color);
+              $(diffHtml).append(span)
+            });
+
+            if(changed){
+                var tr = $("<tr></tr>");
+                var td1 = $("<td>" + key + "</td>");
+                var td2 = $("<td></td>");
+                $(td2).append(diffHtml);
+                $(tr).append(td1);
+                $(tr).append(td2);
+                table.append(tr);
+            }
         }
     }
 
@@ -132,13 +164,14 @@ function openModal(data)
         {
             x: Object.keys(chartData),
             y: Object.values(chartData),
+            text: labels,
             type: 'line'
         }
     ];
+
     $("#chartTitle").text(isDigitalGraph ? "Tendency" : "Changes");
     modal.open();
     Plotly.newPlot('chart', data);
-    
 }
 
 $(document).ready(function () {
@@ -323,7 +356,6 @@ $(document).ready(function () {
             xctx.strokeRect(sel.left * x_scale, sel.top * y_scale, sel.width * x_scale, sel.height * y_scale);
             state_clicked = true;
 
-            console.log(numeral(sel.text));
             $.get({
                 url: "/history",
                 data: {

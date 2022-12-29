@@ -153,7 +153,7 @@ def history():
 def add():
 	useragent = request.headers.get("User-Agent")
 	locale = request.headers.get("Accept-Language")
-	url = (request.form.get('url') if request.form.get('url') else "").strip()
+	url = (request.form.get('url') if request.args.get('url') else "").strip()
 	key = Fetcher.getKey(url)
 	storage.add(url, useragent, locale, key)
 	return 'ok', 200
