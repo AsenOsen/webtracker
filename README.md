@@ -3,6 +3,7 @@
 - browser locale (IP-based language site)
 - roll in repeatitive texts in same tag
 - text cleaner on click (user remove text lines)
+- keep cookies for popular web sites
 
 # ToDo
 
