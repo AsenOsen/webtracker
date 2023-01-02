@@ -21,7 +21,7 @@ function getxpath(e) {
                 }
                 d = d.nextSibling
             }
-            o.push((n.prefix ? n.prefix + ":" : "") + n.localName + (i || r ? "[" + (i + 1) + "]" : "")), n = n.parentNode
+            o.push((n.prefix ? n.prefix + ":" : "") + n.localName + ("[" + (i + 1) + "]")), n = n.parentNode
         }
         return o.length ? "/" + o.reverse().join("/") : ""
     }

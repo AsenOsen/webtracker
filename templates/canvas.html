@@ -89,6 +89,10 @@ function openModal(data)
     var digitsCount = 0;
     for(var ts in data) {
         var contents = data[ts];
+        // ignore unsuccessful snapshots
+        if(contents == null){
+            continue;
+        }
         var dateTime = moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm");
         var yNumeral = numeral(contents).value();
         if(yNumeral != null && !isNaN(yNumeral)){
