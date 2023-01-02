@@ -67,6 +67,13 @@ var x_scale = 1;
 var y_scale = 1;
 var selector_data;
 
+// TODO: not cross-browser solution
+function resetUserScale()
+{
+    var appliedScale = 1 - Math.random()*0.01;
+    $('meta[name="viewport"]').attr('content', "width=device-width, initial-scale=" + appliedScale);
+}
+
 function openModal(onOpen)
 {
     var modal = new tingle.modal({
@@ -75,6 +82,7 @@ function openModal(onOpen)
         closeMethods: ['overlay', 'button', 'escape'],
         cssClass: ['tracker-modal-window'],
         closeLabel: "Close",
+        beforeOpen: resetUserScale,
         onOpen: onOpen,
         onClose: () => { $(".tracker-modal-window #contents").remove() }
     });
@@ -207,7 +215,7 @@ function loadXpath()
     });
 }
 
-function resetScale() 
+function resizeView() 
 {
     // some things to check if the scaling doesnt work
     // - that the widths/sizes really are about the actual screen size cat elements.json |grep -o width......|sort|uniq
@@ -231,10 +239,10 @@ function initView()
 {
     $(window).resize(function () {
         clearSelection();
-        resetScale();
+        resizeView();
     });
 
-    resetScale();
+    resizeView();
     $('#selector-canvas').bind('mousemove', onCanvasMove);
     $('#selector-canvas').bind('click', onCanvasClicked);
 }
