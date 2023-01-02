@@ -1,13 +1,22 @@
 <!DOCTYPE html>
-
-<script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tingle/0.8.4/tingle.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tingle/0.8.4/tingle.min.css" />
-<script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/diff2html@2.9.0/dist/diff2html.min.js"></script>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tingle/0.16.0/tingle.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.16.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/diff2html@2.9.0/dist/diff2html.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tingle/0.16.0/tingle.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.css">
+</head>
 
 <style type="text/css">
     #selector-wrapper {
@@ -30,17 +39,19 @@
     }
 </style>
 
-<div id="selector-wrapper" style="display: none">
-    <input type="hidden" id="key" value="{{ key }}">
-    <img id="selector-background" src="{{ screenshot_url }}"/>
-    <canvas id="selector-canvas"></canvas>
-</div>
-<div id="modal" style="display: none">
-    <div>
-        <div id="chartTitle"></div>
-        <div id="chart" style="width:100%"></div>
-        <table id="changes" style="width:100%" border="1">
-        </table>
+<div class="ui container">
+    <div id="selector-wrapper" style="display: none">
+        <input type="hidden" id="key" value="{{ key }}">
+        <img id="selector-background" src="{{ screenshot_url }}"/>
+        <canvas id="selector-canvas"></canvas>
+    </div>
+    <div id="modal" style="display: none">
+        <div id="contents">
+            <div id="chartTitle"></div>
+            <div id="chart" style="width:100%"></div>
+            <table id="changes" style="width:100%" border="1">
+            </table>
+        </div>
     </div>
 </div>
 
@@ -56,25 +67,16 @@ var x_scale = 1;
 var y_scale = 1;
 var selector_data;
 
-function openModal(data)
+function openModal(onOpen)
 {
     var modal = new tingle.modal({
         footer: true,
         stickyFooter: false,
         closeMethods: ['overlay', 'button', 'escape'],
+        cssClass: ['tracker-modal-window'],
         closeLabel: "Close",
-        onOpen: function() {
-            console.log('modal open');
-        },
-        onClose: function() {
-            console.log('modal closed');
-        },
-        beforeClose: function() {
-            // here's goes some logic
-            // e.g. save content before closing the modal
-            return true; // close the modal
-            return false; // nothing happens
-        }
+        onOpen: onOpen,
+        onClose: () => { $(".tracker-modal-window #contents").remove() }
     });
     modal.setContent($("#modal").html());
     modal.addFooterBtn('As tendency', 'tingle-btn tingle-btn--primary', function() {
@@ -83,7 +85,11 @@ function openModal(data)
     modal.addFooterBtn('As changes', 'tingle-btn tingle-btn--danger', function() {
         modal.close();
     });
+    modal.open();
+}
 
+function showDataGraph(data)
+{
     var chartDataNumeral = {};
     var chartDataTextual = {};
     var parsedDigitsCount = 0;
@@ -107,6 +113,9 @@ function openModal(data)
     var digitPercentage = parsedDigitsCount / Object.keys(chartDataNumeral).length;
     var isDigitalGraph = digitPercentage >= 0.5
     var chartData = {};
+
+    // TODO: temporary dirt! Waiting for ReactJS 
+    $("#changes").empty();
 
     // TODO: algorithm of determining whether graph should be digital or textual
     // can be better: if numeral`ed digit is not substr`ed within contents
@@ -163,9 +172,10 @@ function openModal(data)
         }
     ];
 
-    $("#chartTitle").text(isDigitalGraph ? "Tendency" : "Changes");
-    modal.open();
-    Plotly.newPlot('chart', data);
+    openModal(() => {
+        $(".tracker-modal-window #chartTitle").text(isDigitalGraph ? "Tendency" : "Changes");
+        Plotly.newPlot($('.tracker-modal-window #chart')[0], data);
+    });
 }
 
 function bootstrapSelector() 
@@ -320,7 +330,7 @@ function onCanvasClicked(e)
             "xpath": hoveredXpath
         }
     }).done(function (data) {
-        openModal(data);
+        showDataGraph(data);
     });
 }
 

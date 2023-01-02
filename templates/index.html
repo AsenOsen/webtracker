@@ -1,20 +1,38 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title></title>
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.5.0/dist/semantic.min.js"></script>
+</head>
 
-<form method="POST" action="add">
-    Add new: 
-    <input type="text" name="url" />
-    <input type="submit" value="Add URL" />
-</form>
+<body>
+    <div class="ui one column container">
+        <div class="column">
+            <form class="ui form" method="POST" action="add">
+                <div class="field">
+                    <label>Add URL</label>
+                    <input type="text" name="url">
+                </div>
+                <button class="ui button" type="submit">Add URL</button>
+            </form>
 
-<table border=1>
-{% for key in db %}
+            <table border=1>
+            {% for key in db %}
 
-    <tr>
-        <td><a href="{{ db[key]['url'] }}" target="_blank">{{ db[key]['url'] }}</a></td>
-        <td><a href="/snapshot?key={{ key }}">Snapshot</a></td>
-        <td><a href="/view?key={{ key }}">See</a></td>
-        <td><a href="/del?key={{ key }}">Delete</a></td>
-    </tr>
+                <tr>
+                    <td><a href="{{ db[key]['url'] }}" target="_blank">{{ db[key]['url'] }}</a></td>
+                    <td><a href="/snapshot?key={{ key }}">Snapshot</a></td>
+                    <td><a href="/view?key={{ key }}">See</a></td>
+                    <td><a href="/del?key={{ key }}">Delete</a></td>
+                </tr>
 
-{% endfor %}
-</table>
+            {% endfor %}
+            </table>
+        </div>
+    </div>
+</body>
