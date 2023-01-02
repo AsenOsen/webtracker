@@ -46,7 +46,6 @@
 
 <script type="text/javascript">
 
-var current_selected_xpath = false;
 var state_clicked = false;
 var canvas;
 // greyed out fill context
@@ -225,6 +224,38 @@ function initView()
     $('#selector-canvas').bind('click', onCanvasClicked);
 }
 
+function findHoveredXpath(e)
+{
+     // Add in offset
+    if ((typeof e.offsetX === "undefined" || typeof e.offsetY === "undefined") || (e.offsetX === 0 && e.offsetY === 0)) {
+        var targetOffset = $(e.target).offset();
+        e.offsetX = e.pageX - targetOffset.left;
+        e.offsetY = e.pageY - targetOffset.top;
+    }
+
+    var x = e.offsetX;
+    var y = e.offsetY;
+
+    // the smallest possible square
+    var hoveredElementXpath = null;
+    var min_square = Infinity;
+    ctx.fillStyle = 'rgba(205,0,0,0.35)';
+    for (var xpath in selector_data['xpath']) {
+        var sel = selector_data['xpath'][xpath];
+        var intersected = 
+            (y > sel.top * y_scale && y < sel.top * y_scale + sel.height * y_scale) 
+            && 
+            (x > sel.left * y_scale && x < sel.left * y_scale + sel.width * y_scale);
+        var lessSquare = sel.width * sel.height < min_square;
+        if (intersected && lessSquare) {
+            hoveredElementXpath = xpath;
+            min_square = sel.width * sel.height;
+        }
+    }
+
+    return hoveredElementXpath;
+}
+
 function onCanvasMove(e)
 {
     if (state_clicked) {
@@ -233,54 +264,41 @@ function onCanvasMove(e)
 
     clearSelection();
 
-    // Add in offset
-    if ((typeof e.offsetX === "undefined" || typeof e.offsetY === "undefined") || (e.offsetX === 0 && e.offsetY === 0)) {
-        var targetOffset = $(e.target).offset();
-        e.offsetX = e.pageX - targetOffset.left;
-        e.offsetY = e.pageY - targetOffset.top;
-    }
+    var hoveredXpath = findHoveredXpath(e);
+    var element = hoveredXpath ? selector_data['xpath'][hoveredXpath] : null;
 
-    // the smallest possible square
-    var found = null;
-    var min_square = Infinity;
-    ctx.fillStyle = 'rgba(205,0,0,0.35)';
-    for (var xpath in selector_data['xpath']) {
-        // draw all of them? let them choose somehow?
-        var sel = selector_data['xpath'][xpath];
-        // If we are in a bounding-box
-        var intersected = 
-            (e.offsetY > sel.top * y_scale && e.offsetY < sel.top * y_scale + sel.height * y_scale) 
-            && 
-            (e.offsetX > sel.left * y_scale && e.offsetX < sel.left * y_scale + sel.width * y_scale);
-        var lessSquare = sel.width * sel.height < min_square;
-        if (intersected && lessSquare) {
-            found = sel;
-            current_selected_xpath = xpath;
-            min_square = sel.width * sel.height;
-        }
-    }
-
-    if(found != null){
-        ctx.strokeRect(found.left * x_scale, found.top * y_scale, found.width * x_scale, found.height * y_scale);
-        ctx.fillRect(found.left * x_scale, found.top * y_scale, found.width * x_scale, found.height * y_scale);
+    if(element){
+        ctx.strokeRect(
+            element.left * x_scale, element.top * y_scale, 
+            element.width * x_scale, element.height * y_scale
+            );
+        ctx.fillRect(
+            element.left * x_scale, element.top * y_scale, 
+            element.width * x_scale, element.height * y_scale
+            );
     }   
 }
 
 function clearSelection()
 {
     state_clicked = false;
-    current_selected_xpath = null;
     xctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function onCanvasClicked() 
+function onCanvasClicked(e) 
 {
     if (state_clicked) {
        clearSelection();
        return;
     }
 
-    var sel = selector_data['xpath'][current_selected_xpath];
+    var hoveredXpath = findHoveredXpath(e);
+    if(!hoveredXpath) {
+        console.log("No element found under mouse click coordinates");
+        return;
+    }
+
+    var sel = selector_data['xpath'][hoveredXpath];
     xctx.fillStyle = 'rgba(205,205,205,0.95)';
     xctx.strokeStyle = 'rgba(225,0,0,0.9)';
     xctx.lineWidth = 3;
@@ -294,7 +312,7 @@ function onCanvasClicked()
         url: "/history",
         data: {
             "key": $("#key").val(),
-            "xpath": current_selected_xpath
+            "xpath": hoveredXpath
         }
     }).done(function (data) {
         openModal(data);
