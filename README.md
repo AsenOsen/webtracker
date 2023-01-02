@@ -4,6 +4,7 @@
 - roll in repeatitive texts in same tag
 - text cleaner on click (user remove text lines)
 - keep cookies for popular web sites
+- get rid of null's (if site restructure happened - like with worldometer)
 
 # ToDo
 
