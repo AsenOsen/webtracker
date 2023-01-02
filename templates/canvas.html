@@ -86,7 +86,7 @@ function openModal(data)
 
     var chartDataNumeral = {};
     var chartDataTextual = {};
-    var digitsCount = 0;
+    var parsedDigitsCount = 0;
     for(var ts in data) {
         var contents = data[ts];
         // ignore unsuccessful snapshots
@@ -95,15 +95,16 @@ function openModal(data)
         }
         var dateTime = moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm");
         var yNumeral = numeral(contents).value();
-        if(yNumeral != null && !isNaN(yNumeral)){
-            digitsCount += 1;
+        // consider number parsing succesfull only if readable digit extracted
+        if(yNumeral != null && yNumeral != Infinity && !isNaN(yNumeral)){
+            parsedDigitsCount += 1;
         }
         chartDataNumeral[dateTime] = yNumeral || 0;
         chartDataTextual[dateTime] = contents;
     }
 
     var labels = Object.values(chartDataTextual).map(x => String(x).substr(0,50));
-    var digitPercentage = digitsCount / Object.keys(chartDataNumeral).length;
+    var digitPercentage = parsedDigitsCount / Object.keys(chartDataNumeral).length;
     var isDigitalGraph = digitPercentage >= 0.5
     var chartData = {};
 
