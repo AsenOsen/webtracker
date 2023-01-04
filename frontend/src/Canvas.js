@@ -190,7 +190,7 @@ function onCanvasClicked(e)
     var sel = selector_data['xpath'][hoveredXpath];
     xctx.fillStyle = 'rgba(205,205,205,0.95)';
     xctx.strokeStyle = 'rgba(225,0,0,0.9)';
-    xctx.lineWidth = 3;
+    xctx.lineWidth = 1;
     xctx.fillRect(0, 0, canvas.width, canvas.height);
     // Clear out what only should be seen (make a clear/clean spot)
     xctx.clearRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
@@ -210,20 +210,17 @@ function onCanvasClicked(e)
 
 function resizeView() 
 {
-    var selector_image = document.getElementById("canvas");
-    var selector_image_rect = selector_image.getBoundingClientRect();
-    var canvasWidth = selector_image_rect.width;
+    var canvasWidth = canvas.getBoundingClientRect().width;
     scale = canvasWidth / selector_data['browser_width'];
 
     // make the canvas the same size as the image 
     // required to set in pixels - otherwise canvas will have strange scale on drawing
-    $('#canvas').attr('height', orig_img_h * scale);
-    $('#canvas').attr('width', canvasWidth);
+    $(canvas).attr('height', orig_img_h * scale);
+    $(canvas).attr('width', canvasWidth);
 
     ctx.strokeStyle = 'rgba(255,0,0, 0.9)';
     ctx.fillStyle = 'rgba(255,0,0, 0.1)';
-    ctx.lineWidth = 3;
-    console.log("onResize | scaling set: " + scale);
+    ctx.lineWidth = 1;
 }
 
 function clearSelection()
@@ -232,34 +229,21 @@ function clearSelection()
     xctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function initView() 
-{
+const onPictureLoaded = (width, height) => {
+    orig_img_w = width
+    orig_img_h = height
+    canvas = document.getElementById("canvas")
+    xctx = canvas.getContext("2d");
+    ctx = canvas.getContext("2d");
+
     $(window).resize(function () {
         clearSelection();
         resizeView();
     });
 
     resizeView();
-    $('#canvas').bind('mousemove', onCanvasMove);
-    $('#canvas').bind('click', onCanvasClicked);
-}
-
-const loadXpath = () => {  
-    fetch("/xpath?key="+key).then(res => res.json()).then((xpath) => {
-        console.log("Reported browser width from backend: " + xpath['browser_width']);
-        selector_data = xpath;
-        initView();
-    });
-}
-
-const onPictureLoaded = (width, height) => {
-    console.log("Loaded background");
-    orig_img_w = width
-    orig_img_h = height
-    canvas = document.getElementById("canvas")
-    xctx = canvas.getContext("2d");
-    ctx = canvas.getContext("2d");
-    loadXpath();
+    $(canvas).bind('mousemove', onCanvasMove);
+    $(canvas).bind('click', onCanvasClicked);
 }
 
 const ChangesTableRow = ({change}) => {
@@ -331,22 +315,28 @@ const ModalWindow = () => {
     );
 }
 
-const Canvas = () => {
-    key = useParams().key;
-    var src = "/static/snapshots/" + key + "/screenshot.jpg";
-    // call after component loaded
-    useEffect(() => {
-        getImageSize(src).then(({ width, height }) => {
-            console.log("Image size: " + width + ":" + height)
-            onPictureLoaded(width, height);
-        });
-    });
-    var styles = {
+const CanvasStyles = (url) => {
+    return {
         "width": "100%",
-        "background": "url("+src+")",
+        "backgroundImage": "url("+url+")",
         "backgroundSize": "cover",
         "backgroundRepeat": "no-repeat"
-    };
+    }
+}
+
+const Canvas = () => {
+    const [styles, setStyles] = useState({});
+    key = useParams().key;
+    // call after component loaded
+    useEffect(() => {
+        fetch("/latest/"+key).then(res => res.json()).then((latest) => {
+            selector_data = latest.xpath;
+            setStyles(styles => ({...CanvasStyles(latest.img)}))
+            getImageSize(latest.img).then(({ width, height }) => {
+                onPictureLoaded(width, height);
+            });
+        });
+    }, []);
     return (
         <div className="ui container">
             <ModalWindow />

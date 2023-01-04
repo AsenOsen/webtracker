@@ -16,13 +16,13 @@ const Form = () => {
 const Snapshot = (key) => {
     fetch("/snapshot/" + key)
         .then((res) => res.text())
-        .then((text) => console.log(text))
+        .then((text) => alert(text))
 }
 
 const Delete = (key) => {
     fetch("/del/" + key)
         .then((res) => res.text())
-        .then((text) => console.log(text))
+        .then((text) => alert(text))
 }
 
 const Table = () => {

@@ -135,10 +135,12 @@ storage = Storage()
 @app.route('/urls')
 def urls():
 	return jsonify(storage.get())
-@app.route('/xpath')
-def xpath():
-	key = request.args.get('key') if request.args.get('key') else ""
-	return jsonify(json.loads(open(f"static/snapshots/{key}/xpath.json").read()))
+@app.route('/latest/<key>')
+def latest(key):
+	xpath = json.loads(open(f"static/snapshots/{key}/xpath.json").read())
+	# TODO: must return unique latest images` path (because of browser cache)
+	screen = f"/static/snapshots/{key}/screenshot.jpg"
+	return jsonify({'xpath':xpath, 'img':screen})
 @app.route('/history')
 def history():
 	key = request.args.get('key') if request.args.get('key') else ""
@@ -164,4 +166,3 @@ def snapshot(key):
 	Fetcher(info['ua'], info['lc']).fetch(info['url'])
 	return f"ok, took {time.time()-start} sec", 200
 app.run(host="0.0.0.0", port=8080)
-
