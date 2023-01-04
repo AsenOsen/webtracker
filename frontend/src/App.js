@@ -1,6 +1,6 @@
-import './App.css';
 import Main from './Main';
 import Canvas from './Canvas';
+import './App.css';
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 

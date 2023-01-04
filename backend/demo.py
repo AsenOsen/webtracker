@@ -153,14 +153,12 @@ def add():
 	key = Fetcher.getKey(url)
 	storage.add(url, useragent, locale, key)
 	return 'ok', 200
-@app.route('/del')
-def delete():
-	key = request.args.get('key') if request.args.get('key') else ""
+@app.route('/del/<key>')
+def delete(key):
 	storage.delete(key)
-	return 'ok', 200
-@app.route('/snapshot')
-def snapshot():
-	key = request.args.get('key') if request.args.get('key') else ""
+	return 'ok, deleted', 200
+@app.route('/snapshot/<key>')
+def snapshot(key):
 	info = storage.get()[key]
 	start = time.time()
 	Fetcher(info['ua'], info['lc']).fetch(info['url'])

@@ -13,6 +13,18 @@ const Form = () => {
     )
 }
 
+const Snapshot = (key) => {
+    fetch("/snapshot/" + key)
+        .then((res) => res.text())
+        .then((text) => console.log(text))
+}
+
+const Delete = (key) => {
+    fetch("/del/" + key)
+        .then((res) => res.text())
+        .then((text) => console.log(text))
+}
+
 const Table = () => {
     const [urls, setUrls] = useState({});
     useEffect(() => {
@@ -24,9 +36,9 @@ const Table = () => {
             { Object.entries(urls).map(([key, value]) => (
                 <tr key={key}>
                     <td><a href={value.url} target="_blank">{value.url}</a></td>
-                    <td><a href={"/snapshot?key=" + key}>Snapshot</a></td>
+                    <td><button onClick={() => Snapshot(key)}>Snapshot</button></td>
                     <td><Link to={"/view/" + key}>View</Link></td>
-                    <td><a href={"/del?key=" + key}>Delete</a></td>
+                    <td><button onClick={() => Delete(key)}>Delete</button></td>
                 </tr>
             ))}
             </tbody>
