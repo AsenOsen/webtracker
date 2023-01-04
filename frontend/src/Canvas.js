@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getImageSize } from 'react-image-size'
-import { Modal, Button } from 'react-bootstrap'
+import { Modal, ToggleButton, ToggleButtonGroup } from 'react-bootstrap'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import $ from "jquery"
 import moment from 'moment'
@@ -20,9 +20,7 @@ var scale = 1;
 var selector_data;
 var orig_img_w;
 var orig_img_h;
-var setChangesTableContents;
 var showModal;
-var changesGlobal = [];
 
 function resetUserScale()
 {
@@ -88,6 +86,14 @@ function onCanvasMove(e)
     drawSelectedXpath(findHoveredXpath(e));
 }
 
+function setGraphType(data, isNumeral)
+{
+    data.x = isNumeral ? data.x_numeral : data.x_changes
+    data.y = isNumeral ? data.y_numeral : data.y_changes
+    data.text = isNumeral ? data.labels_numeral : data.labels_changes
+    data.is_numeral = isNumeral
+    return data
+}
 
 function showDataGraph(data)
 {
@@ -110,62 +116,59 @@ function showDataGraph(data)
         chartDataTextual[dateTime] = contents;
     }
 
-    var labels = Object.values(chartDataTextual).map(x => String(x).substr(0,50));
-    var digitPercentage = parsedDigitsCount / Object.keys(chartDataNumeral).length;
-    var isDigitalGraph = digitPercentage >= 0.5
-    var chartData = {};
-    var changes = [];
-
     // TODO: algorithm of determining whether graph should be digital or textual
     // can be better: if numeral`ed digit is not substr`ed within contents
     // maybe it is better to build graph as changes graph (requires research) 
-    if(isDigitalGraph) {
-        chartData = chartDataNumeral;
-    } else {
-        var changesCounter = 0;
-        var prevText = null;        
-        for(var key in chartDataTextual){
-            var newText = chartDataTextual[key];
-            if(newText != prevText && prevText != null) {
-                changesCounter += 1;
-            }
-            chartData[key] = changesCounter;
-            newText = newText||"";
-            if (prevText == null){
-                prevText = newText;
-            }
-            var diff = Diff.diffLines(prevText, newText);
-            prevText = newText;        
+    var digitPercentage = parsedDigitsCount / Object.keys(chartDataNumeral).length;
+    var isDigitalGraph = digitPercentage >= 0.5
 
-            var changed = false;
-            var diffObj = []
-            diff.forEach((part) => {
-                diffObj.push({
-                    changed: part.added || part.removed,
-                    added: part.added,
-                    value: part.value
-                })
-                changed |= (part.added || part.removed);
-            });
+    var changesCounter = 0;
+    var prevText = null;   
+    var chartDataChanges = {};  
+    var changes = []   
+    for(var key in chartDataTextual) {
+        var newText = chartDataTextual[key];
+        if(newText != prevText && prevText != null) {
+            changesCounter += 1;
+        }
+        chartDataChanges[key] = changesCounter
+        newText = newText||"";
+        if (prevText == null){
+            prevText = newText;
+        }
+        var diff = Diff.diffLines(prevText, newText);
+        prevText = newText;        
 
-            if(changed) {
-                changes.push({time:key, diff:diffObj})
-            }
+        var changed = false;
+        var diffObj = []
+        diff.forEach((part) => {
+            diffObj.push({
+                changed: part.added || part.removed,
+                added: part.added,
+                value: part.value
+            })
+            changed |= (part.added || part.removed);
+        });
+
+        if(changed) {
+            changes.push({time:key, diff:diffObj})
         }
     }
 
-    //console.log(chartData);
-    var data = [
-        {
-            x: Object.keys(chartData),
-            y: Object.values(chartData),
-            text: labels,
-            type: 'line'
-        }
-    ];
+    var chartData = {
+        x_numeral: Object.keys(chartDataNumeral),
+        y_numeral: Object.values(chartDataNumeral),
+        x_changes: Object.keys(chartDataChanges),
+        y_changes: Object.values(chartDataChanges),
+        changes: changes,
+        is_numeral: null,
+        labels_numeral: Object.values(chartDataNumeral).map(x => String(x).substr(0,50)),
+        labels_changes: Object.values(chartDataTextual).map(x => String(x).substr(0,50)),
+        type: 'line'
+    }
 
-    var title = isDigitalGraph ? "Tendency" : "Changes"
-    showModal(title, data, changes)
+    //console.log(chartData);
+    showModal(setGraphType(chartData, isDigitalGraph))
 }
 
 
@@ -212,9 +215,11 @@ function resizeView()
     var canvasWidth = selector_image_rect.width;
     scale = canvasWidth / selector_data['browser_width'];
 
-    // make the canvas the same size as the image
+    // make the canvas the same size as the image 
+    // required to set in pixels - otherwise canvas will have strange scale on drawing
     $('#canvas').attr('height', orig_img_h * scale);
     $('#canvas').attr('width', canvasWidth);
+
     ctx.strokeStyle = 'rgba(255,0,0, 0.9)';
     ctx.fillStyle = 'rgba(255,0,0, 0.1)';
     ctx.lineWidth = 3;
@@ -296,27 +301,31 @@ const Graph = ({data}) => {
 const ModalWindow = () => {
     const [fullscreen, setFullscreen] = useState(true);
     const [show, setShow] = useState(false);
-    const [title, setTitle] = useState("")
-    const [graphData, setGraphData] = useState([])
-    const [changes, setChanges] = useState({})
+    const [graphData, setGraphData] = useState({})
 
-    showModal = (title, graphData, changes) => {
+    showModal = (graphData) => {
         const values = [true, 'sm-down', 'md-down', 'lg-down', 'xl-down', 'xxl-down'];
-        setTitle(title);
         setGraphData(graphData);
-        setChanges(changes);
         setFullscreen(true);
         setShow(true);
+    }
+
+    var switchGraph = (isNumeral) => {
+        setGraphData(graphData => ({...setGraphType(graphData, isNumeral)}))
     }
 
     return (
         <Modal show={show} fullscreen={fullscreen} onHide={() => setShow(false)} onShow={resetUserScale}>
             <Modal.Header closeButton>
-                <Modal.Title>{title}</Modal.Title>
+                <Modal.Title>{graphData.is_numeral ? "Tendency" : "Changes"}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <Graph data={graphData} />
-                {changes && <ChangesTable changes={changes} />}
+                <ToggleButtonGroup type="radio" name="options" value={graphData.is_numeral ? 2 : 1}>
+                    <ToggleButton value={1} onClick={() => switchGraph(false)}>As changes</ToggleButton>
+                    <ToggleButton value={2} onClick={() => switchGraph(true)}>As tendency</ToggleButton>
+                </ToggleButtonGroup>
+                <Graph data={[graphData]} />
+                {!graphData.is_numeral && <ChangesTable changes={graphData.changes} />}
             </Modal.Body>
         </Modal>
     );
