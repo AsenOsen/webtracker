@@ -1,0 +1,349 @@
+import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
+import { getImageSize } from 'react-image-size'
+import { Modal, Button } from 'react-bootstrap'
+import 'bootstrap/dist/css/bootstrap.min.css';
+import $ from "jquery"
+import moment from 'moment'
+import numeral from 'numeral'
+import * as Diff from 'diff';
+import Plot from 'react-plotly.js';
+
+var key = null;
+var state_clicked = false;
+var canvas;
+// greyed out fill context
+var xctx;
+// redline highlight context
+var ctx;
+var scale = 1;
+var selector_data;
+var orig_img_w;
+var orig_img_h;
+var setChangesTableContents;
+var showModal;
+var changesGlobal = [];
+
+function resetUserScale()
+{
+    var appliedScale = 1 - Math.random()*0.01;
+    $('meta[name="viewport"]').attr('content', "width=device-width, initial-scale=" + appliedScale);
+}
+
+function findHoveredXpath(e)
+{
+     // Add in offset
+    /*if ((typeof e.offsetX === "undefined" || typeof e.offsetY === "undefined") || (e.offsetX === 0 && e.offsetY === 0)) {
+        var targetOffset = $(e.target).offset();
+        e.offsetX = e.pageX - targetOffset.left;
+        e.offsetY = e.pageY - targetOffset.top;
+    }*/
+
+    var x = e.offsetX;
+    var y = e.offsetY;
+
+    // the smallest possible square
+    var hoveredElementXpath = null;
+    var min_square = Infinity;
+    ctx.fillStyle = 'rgba(205,0,0,0.35)';
+    for (var xpath in selector_data['xpath']) {
+        var sel = selector_data['xpath'][xpath];
+        var intersected = 
+            (y > sel.top * scale && y < sel.top * scale + sel.height * scale) 
+            && 
+            (x > sel.left * scale && x < sel.left * scale + sel.width * scale);
+        var lessSquare = sel.width * sel.height < min_square;
+        if (intersected && lessSquare) {
+            hoveredElementXpath = xpath;
+            min_square = sel.width * sel.height;
+        }
+    }
+
+    return hoveredElementXpath;
+}
+
+function drawSelectedXpath(hoveredXpath)
+{
+    var element = hoveredXpath ? selector_data['xpath'][hoveredXpath] : null;
+
+    if(element) {
+        ctx.strokeRect(
+            element.left * scale, element.top * scale, 
+            element.width * scale, element.height * scale
+            );
+        ctx.fillRect(
+            element.left * scale, element.top * scale, 
+            element.width * scale, element.height * scale
+            );
+    }  
+}
+
+function onCanvasMove(e)
+{
+    if (state_clicked) {
+        return;
+    }
+
+    clearSelection();
+    drawSelectedXpath(findHoveredXpath(e));
+}
+
+
+function showDataGraph(data)
+{
+    var chartDataNumeral = {};
+    var chartDataTextual = {};
+    var parsedDigitsCount = 0;
+    for(var ts in data) {
+        var contents = data[ts];
+        // ignore unsuccessful snapshots
+        if(contents == null){
+            continue;
+        }
+        var dateTime = moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm");
+        var yNumeral = numeral(contents).value();
+        // consider number parsing succesfull only if readable digit extracted
+        if(yNumeral != null && yNumeral != Infinity && !isNaN(yNumeral)){
+            parsedDigitsCount += 1;
+        }
+        chartDataNumeral[dateTime] = yNumeral || 0;
+        chartDataTextual[dateTime] = contents;
+    }
+
+    var labels = Object.values(chartDataTextual).map(x => String(x).substr(0,50));
+    var digitPercentage = parsedDigitsCount / Object.keys(chartDataNumeral).length;
+    var isDigitalGraph = digitPercentage >= 0.5
+    var chartData = {};
+    var changes = [];
+
+    // TODO: algorithm of determining whether graph should be digital or textual
+    // can be better: if numeral`ed digit is not substr`ed within contents
+    // maybe it is better to build graph as changes graph (requires research) 
+    if(isDigitalGraph) {
+        chartData = chartDataNumeral;
+    } else {
+        var changesCounter = 0;
+        var prevText = null;        
+        for(var key in chartDataTextual){
+            var newText = chartDataTextual[key];
+            if(newText != prevText && prevText != null) {
+                changesCounter += 1;
+            }
+            chartData[key] = changesCounter;
+            newText = newText||"";
+            if (prevText == null){
+                prevText = newText;
+            }
+            var diff = Diff.diffLines(prevText, newText);
+            prevText = newText;        
+
+            var changed = false;
+            var diffObj = []
+            diff.forEach((part) => {
+                diffObj.push({
+                    changed: part.added || part.removed,
+                    added: part.added,
+                    value: part.value
+                })
+                changed |= (part.added || part.removed);
+            });
+
+            if(changed) {
+                changes.push({time:key, diff:diffObj})
+            }
+        }
+    }
+
+    //console.log(chartData);
+    var data = [
+        {
+            x: Object.keys(chartData),
+            y: Object.values(chartData),
+            text: labels,
+            type: 'line'
+        }
+    ];
+
+    var title = isDigitalGraph ? "Tendency" : "Changes"
+    showModal(title, data, changes)
+}
+
+
+function onCanvasClicked(e) 
+{
+    if (state_clicked) {
+        clearSelection();
+        return;
+    }
+
+    var hoveredXpath = findHoveredXpath(e);
+    if(!hoveredXpath) {
+        console.log("No element found under mouse click coordinates");
+        return;
+    }
+
+    drawSelectedXpath(hoveredXpath);
+
+    var sel = selector_data['xpath'][hoveredXpath];
+    xctx.fillStyle = 'rgba(205,205,205,0.95)';
+    xctx.strokeStyle = 'rgba(225,0,0,0.9)';
+    xctx.lineWidth = 3;
+    xctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Clear out what only should be seen (make a clear/clean spot)
+    xctx.clearRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
+    xctx.strokeRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
+    state_clicked = true;
+
+    $.get({
+        url: "/history",
+        data: {
+            "key": key,
+            "xpath": hoveredXpath
+        }
+    }).done(function (data) {
+        showDataGraph(data);
+    });
+}
+
+function resizeView() 
+{
+    var selector_image = document.getElementById("canvas");
+    var selector_image_rect = selector_image.getBoundingClientRect();
+    var canvasWidth = selector_image_rect.width;
+    scale = canvasWidth / selector_data['browser_width'];
+
+    // make the canvas the same size as the image
+    $('#canvas').attr('height', orig_img_h * scale);
+    $('#canvas').attr('width', canvasWidth);
+    ctx.strokeStyle = 'rgba(255,0,0, 0.9)';
+    ctx.fillStyle = 'rgba(255,0,0, 0.1)';
+    ctx.lineWidth = 3;
+    console.log("onResize | scaling set: " + scale);
+}
+
+function clearSelection()
+{
+    state_clicked = false;
+    xctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function initView() 
+{
+    $(window).resize(function () {
+        clearSelection();
+        resizeView();
+    });
+
+    resizeView();
+    $('#canvas').bind('mousemove', onCanvasMove);
+    $('#canvas').bind('click', onCanvasClicked);
+}
+
+const loadXpath = () => {  
+    fetch("/xpath?key="+key).then(res => res.json()).then((xpath) => {
+        console.log("Reported browser width from backend: " + xpath['browser_width']);
+        selector_data = xpath;
+        initView();
+    });
+}
+
+const onPictureLoaded = (width, height) => {
+    console.log("Loaded background");
+    orig_img_w = width
+    orig_img_h = height
+    canvas = document.getElementById("canvas")
+    xctx = canvas.getContext("2d");
+    ctx = canvas.getContext("2d");
+    loadXpath();
+}
+
+const ChangesTableRow = ({change}) => {
+    return (
+        <tr>
+            <td key="1">{change.time}</td>
+            <td key="2">
+                {
+                    change.diff.map((diff, index) => {
+                        var styles = {"color": diff.changed ? (diff.added ? "green":"red") : "black"}
+                        return (<span key={index} style={styles}>{diff.value}</span>)
+                    }
+                )}
+            </td>
+        </tr>
+    )
+}
+
+const ChangesTable = ({changes}) => {
+    return (
+        <table className="ui table" border="1">
+            <tbody>
+                { changes.map((change) => <ChangesTableRow key={change.time} change={change} />) }
+            </tbody>
+        </table>
+    )
+}
+
+const Graph = ({data}) => {
+    return (
+      <Plot
+        data={data}
+        useResizeHandler={true}
+        style={{width: "100%", height: "80%"}}
+      />
+    );
+}
+
+const ModalWindow = () => {
+    const [fullscreen, setFullscreen] = useState(true);
+    const [show, setShow] = useState(false);
+    const [title, setTitle] = useState("")
+    const [graphData, setGraphData] = useState([])
+    const [changes, setChanges] = useState({})
+
+    showModal = (title, graphData, changes) => {
+        const values = [true, 'sm-down', 'md-down', 'lg-down', 'xl-down', 'xxl-down'];
+        setTitle(title);
+        setGraphData(graphData);
+        setChanges(changes);
+        setFullscreen(true);
+        setShow(true);
+    }
+
+    return (
+        <Modal show={show} fullscreen={fullscreen} onHide={() => setShow(false)} onShow={resetUserScale}>
+            <Modal.Header closeButton>
+                <Modal.Title>{title}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                <Graph data={graphData} />
+                {changes && <ChangesTable changes={changes} />}
+            </Modal.Body>
+        </Modal>
+    );
+}
+
+const Canvas = () => {
+    key = useParams().key;
+    var src = "/static/snapshots/" + key + "/screenshot.jpg";
+    // call after component loaded
+    useEffect(() => {
+        getImageSize(src).then(({ width, height }) => {
+            console.log("Image size: " + width + ":" + height)
+            onPictureLoaded(width, height);
+        });
+    });
+    var styles = {
+        "width": "100%",
+        "background": "url("+src+")",
+        "backgroundSize": "cover",
+        "backgroundRepeat": "no-repeat"
+    };
+    return (
+        <div className="ui container">
+            <ModalWindow />
+            <canvas id="canvas" style={styles}></canvas>
+        </div>
+    )
+}
+
+export default Canvas;

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, jsonify, request
 from playwright.sync_api import sync_playwright
 import datetime
 import time
@@ -132,13 +132,9 @@ class Fetcher:
 app = Flask(__name__)
 storage = Storage()
 
-@app.route('/')
-def index():
-	return render_template("index.html", db=storage.get())
-@app.route('/view')
-def view():
-	key = request.args.get('key') if request.args.get('key') else ""
-	return render_template("canvas.html", screenshot_url=f"/static/snapshots/{key}/screenshot.jpg", key=key)
+@app.route('/urls')
+def urls():
+	return jsonify(storage.get())
 @app.route('/xpath')
 def xpath():
 	key = request.args.get('key') if request.args.get('key') else ""
