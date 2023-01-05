@@ -43,14 +43,19 @@ class Snapshot:
 		os.makedirs(f"static/snapshots/{key}", exist_ok=True)
 		open(f"static/snapshots/{key}/xpath.{ts}.json","w").write(json.dumps(xpath))
 		open(f"static/snapshots/{key}/screenshot.{ts}.jpg","wb").write(screenshot)
-		open(f"static/snapshots/{key}/xpath.json","w").write(json.dumps(xpath))
-		open(f"static/snapshots/{key}/screenshot.jpg","wb").write(screenshot)
-		open(f"static/snapshots/{key}/points.inf","a").write(str(ts)+"\n")
+		open(f"static/snapshots/{key}/history.inf","a").write(str(ts)+"\n")
+		open(f"static/snapshots/{key}/latest.inf","w").write(str(ts))
+
+	def latest(self, key):
+		latestTs = open(f"static/snapshots/{key}/latest.inf").read()
+		xpath = json.loads(open(f"static/snapshots/{key}/xpath.{latestTs}.json").read())
+		screenshot = f"/static/snapshots/{key}/screenshot.{latestTs}.jpg"
+		return [xpath, screenshot]
 
 	def getXpathHistory(self, key, xpath):
-		points = open(f"static/snapshots/{key}/points.inf").read().split("\n")
+		history = open(f"static/snapshots/{key}/history.inf").read().split("\n")
 		xpathHistory = {}
-		for point in points:
+		for point in history:
 			if not point:
 				break
 			xpathData = json.loads(open(f"static/snapshots/{key}/xpath.{point}.json").read())
@@ -137,9 +142,7 @@ def urls():
 	return jsonify(storage.get())
 @app.route('/latest/<key>')
 def latest(key):
-	xpath = json.loads(open(f"static/snapshots/{key}/xpath.json").read())
-	# TODO: must return unique latest images` path (because of browser cache)
-	screen = f"/static/snapshots/{key}/screenshot.jpg"
+	xpath, screen = Snapshot().latest(key)
 	return jsonify({'xpath':xpath, 'img':screen})
 @app.route('/history')
 def history():
