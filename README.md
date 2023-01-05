@@ -1,9 +1,9 @@
 # ToDo
 
 - keep cookies for popular web sites
-- load test of mass sites scrapping
 - timer-based scrapping (30m, 1h, 5h, 24h)
 - look at history snapshots
+- on canvas click: do not open modal right away, ask user if he wants to over small popup
 
 # Promo
 

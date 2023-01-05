@@ -13,12 +13,6 @@ const Form = () => {
     )
 }
 
-const Snapshot = (key) => {
-    fetch("/snapshot/" + key)
-        .then((res) => res.text())
-        .then((text) => alert(text))
-}
-
 const Delete = (key) => {
     fetch("/del/" + key)
         .then((res) => res.text())
@@ -36,7 +30,6 @@ const Table = () => {
             { Object.entries(urls).map(([key, value]) => (
                 <tr key={key}>
                     <td><a href={value.url} target="_blank">{value.url}</a></td>
-                    <td><button onClick={() => Snapshot(key)}>Snapshot</button></td>
                     <td><Link to={"/view/" + key}>View</Link></td>
                     <td><button onClick={() => Delete(key)}>Delete</button></td>
                 </tr>
