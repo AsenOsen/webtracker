@@ -10,6 +10,7 @@ import * as Diff from 'diff';
 import Plot from 'react-plotly.js';
 
 var key = null;
+// reset every time when react component loaded
 var state_clicked = false;
 var canvas;
 // greyed out fill context
@@ -327,6 +328,7 @@ const CanvasStyles = (url) => {
 const Canvas = () => {
     const [styles, setStyles] = useState({});
     key = useParams().key;
+    state_clicked = false
     // call after component loaded
     useEffect(() => {
         fetch("/latest/"+key).then(res => res.json()).then((latest) => {
