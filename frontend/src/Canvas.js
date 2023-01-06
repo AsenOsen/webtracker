@@ -326,23 +326,33 @@ const CanvasStyles = (url) => {
 }
 
 const Canvas = () => {
-    const [styles, setStyles] = useState({});
+    const [styles, setStyles] = useState({})
+    const [snapshotExists, setSnapshotExists] = useState(true);
     key = useParams().key;
     state_clicked = false
     // call after component loaded
     useEffect(() => {
         fetch("/latest/"+key).then(res => res.json()).then((latest) => {
-            selector_data = latest.xpath;
-            setStyles(styles => ({...CanvasStyles(latest.img)}))
-            getImageSize(latest.img).then(({ width, height }) => {
-                onPictureLoaded(width, height);
-            });
+            if (!latest.xpath || !latest.img){
+                setSnapshotExists(false)
+            } else {
+                selector_data = latest.xpath;
+                setStyles(styles => ({...CanvasStyles(latest.img)}))
+                getImageSize(latest.img).then(({ width, height }) => {
+                    onPictureLoaded(width, height);
+                });
+            }
         });
     }, []);
     return (
         <div className="ui container">
             <ModalWindow />
-            <canvas id="canvas" style={styles}></canvas>
+            {!snapshotExists && (
+                <div className="ui active dimmer">
+                    <div class="ui massive text loader">Wait some time, page will be available soon.</div>
+                </div>
+            )}
+            {snapshotExists && <canvas id="canvas" style={styles}></canvas>}
         </div>
     )
 }

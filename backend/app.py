@@ -1,7 +1,6 @@
 from flask import Flask, jsonify, request
 from storage import Storage, Site
 
-
 app = Flask(__name__)
 storage = Storage()
 
@@ -27,8 +26,11 @@ def add():
 	useragent = request.headers.get("User-Agent")
 	locale = request.headers.get("Accept-Language")
 	url = (request.form.get('url') if request.form.get('url') else "").strip()
-	storage.addSite(url, useragent, locale)
-	return 'ok', 200
+	try:
+		storage.addSite(url, useragent, locale)
+		return 'ok', 200
+	except:
+		return 'already exist', 200
 
 @app.route('/del/<key>')
 def delete(key):

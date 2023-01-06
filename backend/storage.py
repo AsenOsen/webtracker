@@ -2,54 +2,47 @@ import json
 import hashlib
 import datetime
 import os
+from pymongo import MongoClient
 
 
 class Site:
 
-	def __init__(self, key, jsonSite):
-		self.key = key
-		self.url = jsonSite['url']
-		self.locale = jsonSite['lc']
-		self.useragent = jsonSite['ua']
-		self.latestSnapshot = jsonSite['last']
+	def __init__(self, record):
+		self.key = record['key']
+		self.url = record['url']
+		self.locale = record['lc']
+		self.useragent = record['ua']
+		self.latestSnapshot = record['last']
 
 
 class Storage:
 
 	def __init__(self):
-		self.readSites()
-
-	def readSites(self):
-		try:
-			self.db = json.loads(open('static/sites.json', 'r').read())
-		except:
-			self.db = {}
-
-	def flushSites(self):
-		# TODO: remove indent before release
-		open('static/sites.json', 'w').write(json.dumps(self.db, indent=4))
+		self.mongo = MongoClient('localhost', 27017, username='root', password='example')
+		self.db = self.mongo.sites.default
+		self.db.create_index('key', unique=True)
+		#self.db.update_many({}, {'$set': {'history': []}})
 
 	def addSite(self, url, useragent, locale):
-		key = self.getKey(url)
-		self.db[key] = {
+		self.db.insert_one({
+			'key': self.getKey(url), 
 			"url": url,
 			'lc': locale,
 			"ua": useragent,
 			'last': None
-		}
-		self.flushSites()
+			})
 
-	def updateLastTime(self, key, ts):
-		self.db[key]['last'] = int(ts)
-		self.flushSites()
+	def updateLastTime(self, key, ts:int):
+		self.db.update_one({'key': key}, {
+			'$set': {'last': ts},
+			'$push': {'history': ts}
+			})
 
 	def deleteSite(self, key):
-		del self.db[key]
-		self.flushSites()
+		self.db.delete_one({'key': key})
 
 	def getSites(self):
-		self.readSites()
-		return [Site(key, site) for key, site in self.db.items()]
+		return [Site(site) for site in self.db.find({})]
 
 	def getKey(self, url):
 		return hashlib.md5(url.encode('utf-8')).hexdigest()
@@ -61,18 +54,18 @@ class Storage:
 		# TODO: remove indent before release
 		open(f"static/snapshots/{key}/xpath.{ts}.json","w").write(json.dumps(xpath, indent=4))
 		open(f"static/snapshots/{key}/screenshot.{ts}.jpg","wb").write(screenshot)
-		open(f"static/snapshots/{key}/history.inf","a").write(str(ts)+"\n")
-		open(f"static/snapshots/{key}/latest.inf","w").write(str(ts))
 		self.updateLastTime(key, ts)
 
 	def latestSnapshot(self, key):
-		latestTs = open(f"static/snapshots/{key}/latest.inf").read()
-		xpath = json.loads(open(f"static/snapshots/{key}/xpath.{latestTs}.json").read())
-		screenshot = f"/static/snapshots/{key}/screenshot.{latestTs}.jpg"
-		return [xpath, screenshot]
+		latestTs = self.db.find_one({'key': key})['last']
+		if latestTs:
+			xpath = json.loads(open(f"static/snapshots/{key}/xpath.{latestTs}.json").read())
+			screenshot = f"/static/snapshots/{key}/screenshot.{latestTs}.jpg"
+			return [xpath, screenshot]
+		return [None, None]
 
 	def getXpathHistory(self, key, xpath):
-		history = open(f"static/snapshots/{key}/history.inf").read().split("\n")
+		history = self.db.find_one({'key': key})['history']
 		xpathHistory = {}
 		for point in history:
 			if not point:

@@ -15,9 +15,12 @@ class Fetcher:
 		self.xpathjs = open("xpath.js").read()
 		self.storage = Storage()
 
+	def defaultLocale(self):
+		return 'en-US,en;q=0.9'
+
 	def createPage(self, site, browser):
 		context = browser.new_context(
-	    	locale=site.locale, 
+	    	locale=(site.locale or self.defaultLocale()), 
 	    	user_agent=site.useragent,
 	    	bypass_csp=True,
 	    	service_workers='block',
@@ -43,7 +46,9 @@ class Fetcher:
 		    	processing = False
 		    	for page in pages:
 		    		if page['ready']:
+		    			print("Ready | " + page['url'])
 		    			continue
+		    		print("Loading | " + page['url'])
 		    		processing = True
 		    		new_xpath = page['page'].evaluate("async () => {" + self.xpathjs + "}")
 		    		# too long, probably page with dynamic content
