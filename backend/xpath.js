@@ -72,7 +72,7 @@ const findUpTag = (el) => {
 
 function xpath_start() {
     var root = document.documentElement || document.body;
-    var scroll_y =+ root.scrollTop
+    var scroll_y = root ? root.scrollTop : 0;
     // @todo - if it's SVG or IMG, go into image diff mode
     // %ELEMENTS% replaced at injection time because different interfaces use it with different settings
     var elements = window.document.querySelectorAll(ELEMENTS);

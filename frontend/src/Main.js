@@ -4,11 +4,11 @@ import { Link } from 'react-router-dom';
 const Form = () => {
     return (
         <form className="ui form" method="POST" action="add">
-            <div className="field">
+            <div className="ui fluid field">
                 <label>Add URL</label>
                 <input type="text" name="url"/>
             </div>
-            <button className="ui button" type="submit">Add URL</button>
+            <button className="ui fluid button" type="submit">Add URL</button>
         </form>
     )
 }
@@ -27,9 +27,9 @@ const Table = () => {
     return (
         <table className="ui table" border="1">
             <tbody>
-            { Object.entries(urls).map(([key, value]) => (
+            { Object.entries(urls).map(([key, url]) => (
                 <tr key={key}>
-                    <td><a href={value.url} target="_blank">{value.url}</a></td>
+                    <td><a href={url} target="_blank">{url.substr(0,40)}...</a></td>
                     <td><Link to={"/view/" + key}>View</Link></td>
                     <td><button onClick={() => Delete(key)}>Delete</button></td>
                 </tr>

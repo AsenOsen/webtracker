@@ -4,9 +4,22 @@ import datetime
 import os
 
 
+class Site:
+
+	def __init__(self, key, jsonSite):
+		self.key = key
+		self.url = jsonSite['url']
+		self.locale = jsonSite['lc']
+		self.useragent = jsonSite['ua']
+		self.latestSnapshot = jsonSite['last']
+
+
 class Storage:
 
 	def __init__(self):
+		self.readSites()
+
+	def readSites(self):
 		try:
 			self.db = json.loads(open('static/sites.json', 'r').read())
 		except:
@@ -35,7 +48,8 @@ class Storage:
 		self.flushSites()
 
 	def getSites(self):
-		return self.db
+		self.readSites()
+		return [Site(key, site) for key, site in self.db.items()]
 
 	def getKey(self, url):
 		return hashlib.md5(url.encode('utf-8')).hexdigest()

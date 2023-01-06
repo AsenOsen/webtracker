@@ -1,5 +1,5 @@
 from flask import Flask, jsonify, request
-from storage import Storage
+from storage import Storage, Site
 
 
 app = Flask(__name__)
@@ -7,7 +7,8 @@ storage = Storage()
 
 @app.route('/urls')
 def urls():
-	return jsonify(storage.getSites())
+	sites = {site.key:site.url for site in storage.getSites()}
+	return jsonify(sites)
 
 @app.route('/latest/<key>')
 def latest(key):
