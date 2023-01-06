@@ -32,14 +32,18 @@ class Storage:
 			'last': None
 			})
 
-	def updateLastTime(self, key, ts:int):
+	def updateAfterSnapshot(self, key, ts:int, secondsTook):
 		self.db.update_one({'key': key}, {
-			'$set': {'last': ts},
+			'$set': {
+				'last': ts,
+				'took': secondsTook
+			},
 			'$push': {'history': ts}
 			})
 
 	def deleteSite(self, key):
 		self.db.delete_one({'key': key})
+		# TODO: also delete snapshot folder
 
 	def getSites(self):
 		return [Site(site) for site in self.db.find({})]
@@ -47,14 +51,14 @@ class Storage:
 	def getKey(self, url):
 		return hashlib.md5(url.encode('utf-8')).hexdigest()
 
-	def saveSnapshot(self, url, xpath, screenshot):
+	def saveSnapshot(self, url, xpath, screenshot, secondsTook):
 		key = self.getKey(url)
 		ts = int(datetime.datetime.utcnow().timestamp())
 		os.makedirs(f"static/snapshots/{key}", exist_ok=True)
 		# TODO: remove indent before release
 		open(f"static/snapshots/{key}/xpath.{ts}.json","w").write(json.dumps(xpath, indent=4))
 		open(f"static/snapshots/{key}/screenshot.{ts}.jpg","wb").write(screenshot)
-		self.updateLastTime(key, ts)
+		self.updateAfterSnapshot(key, ts, secondsTook)
 
 	def latestSnapshot(self, key):
 		latestTs = self.db.find_one({'key': key})['last']

@@ -72,7 +72,7 @@ class Fetcher:
 	def onResult(self, page):
 		page['ready'] = True
 		del page['xpath']['fingerprint']
-		self.storage.saveSnapshot(page['url'], page['xpath'], page['screenshot'])
+		self.storage.saveSnapshot(page['url'], page['xpath'], page['screenshot'], round(time.time()-page['start'], 2))
 		page['ctx'].close()
 
 	def getNextBunch(self):

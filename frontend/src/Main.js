@@ -1,28 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios'
 
 const Form = () => {
+    const inputRef = useRef(null);
+    const addUrl = () => {
+        axios.post("/add", {url: inputRef.current.value}).then((res) => alert(res.data))
+    }
     return (
-        <form className="ui form" method="POST" action="add">
+        <div className="ui form">
             <div className="ui fluid field">
                 <label>Add URL</label>
-                <input type="text" name="url"/>
+                <input type="text" ref={inputRef} />
             </div>
-            <button className="ui fluid button" type="submit">Add URL</button>
-        </form>
+            <button className="ui fluid button" onClick={addUrl}>Add URL</button>
+        </div>
     )
 }
 
 const Delete = (key) => {
-    fetch("/del/" + key)
-        .then((res) => res.text())
-        .then((text) => alert(text))
+    axios.get('/del/' + key).then((res) => alert(res.data))
 }
 
 const Table = () => {
     const [urls, setUrls] = useState({});
     useEffect(() => {
-        fetch("/urls").then(res => res.json()).then((res) => setUrls(res));
+        axios.get('/urls').then((res) => setUrls(res.data))
     }, []);
     return (
         <table className="ui table" border="1">
