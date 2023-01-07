@@ -13,7 +13,7 @@
 
 # UI
 
-- Tendency/Changes + (current text in brackets)
+- back click in graph view -> close graph
 
 # Bugs
 
@@ -24,7 +24,7 @@
 - producthunt
 - zenlink
 - facebook
-- google "site tracker"
+- google search query "site tracker"
 
 # Use cases
 

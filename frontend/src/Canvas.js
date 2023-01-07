@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { getImageSize } from 'react-image-size'
 import { Modal, ToggleButton, ToggleButtonGroup } from 'react-bootstrap'
+import { browserHistory } from 'react-router'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import $ from "jquery"
 import moment from 'moment'
@@ -101,6 +102,7 @@ function showDataGraph(data)
     var chartDataNumeral = {};
     var chartDataTextual = {};
     var parsedDigitsCount = 0;
+    var currentContents = null
     for(var ts in data) {
         var contents = data[ts];
         // ignore unsuccessful snapshots
@@ -115,6 +117,7 @@ function showDataGraph(data)
         }
         chartDataNumeral[dateTime] = yNumeral || 0;
         chartDataTextual[dateTime] = contents;
+        currentContents = contents
     }
 
     // TODO: algorithm of determining whether graph should be digital or textual
@@ -156,7 +159,15 @@ function showDataGraph(data)
         }
     }
 
+    if (currentContents) {
+        var title = currentContents.substr(0,50)
+        title = '"' + (title + (currentContents.length > title.length ? '...' : '')) + '"'
+    } else {
+        title = null
+    }
+
     var chartData = {
+        titleText: title,
         x_numeral: Object.keys(chartDataNumeral),
         y_numeral: Object.values(chartDataNumeral),
         x_changes: Object.keys(chartDataChanges),
@@ -276,9 +287,24 @@ const ChangesTable = ({changes}) => {
 const Graph = ({data}) => {
     return (
       <Plot
-        data={data}
+        data={[data]}
         useResizeHandler={true}
-        style={{width: "100%", height: "80%"}}
+        style={{
+            width: "100%", height: "80%"
+        }}
+        layout={{
+            margin: {
+                l:50, r:50, t:0, pad:0
+            },
+            title: {
+                text: data.titleText,
+                font: {
+                    size: 10
+                },
+                yanchor: 'top',
+                y: 0.98
+            }
+        }}
       />
     );
 }
@@ -302,14 +328,15 @@ const ModalWindow = () => {
     return (
         <Modal show={show} fullscreen={fullscreen} onHide={() => setShow(false)} onShow={resetUserScale}>
             <Modal.Header closeButton>
-                <Modal.Title>{graphData.is_numeral ? "Tendency" : "Changes"}</Modal.Title>
+                <Modal.Title>
+                    <ToggleButtonGroup type="radio" name="options" value={graphData.is_numeral ? 2 : 1}>
+                        <ToggleButton value={1} onClick={() => switchGraph(false)}>Changes</ToggleButton>
+                        <ToggleButton value={2} onClick={() => switchGraph(true)}>Tendency</ToggleButton>
+                    </ToggleButtonGroup>
+                </Modal.Title>
             </Modal.Header>
             <Modal.Body>
-                <ToggleButtonGroup type="radio" name="options" value={graphData.is_numeral ? 2 : 1}>
-                    <ToggleButton value={1} onClick={() => switchGraph(false)}>As changes</ToggleButton>
-                    <ToggleButton value={2} onClick={() => switchGraph(true)}>As tendency</ToggleButton>
-                </ToggleButtonGroup>
-                <Graph data={[graphData]} />
+                <Graph data={graphData} />
                 {!graphData.is_numeral && <ChangesTable changes={graphData.changes} />}
             </Modal.Body>
         </Modal>

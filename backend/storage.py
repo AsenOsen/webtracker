@@ -69,14 +69,12 @@ class Storage:
 		return [None, None]
 
 	def getXpathHistory(self, key, xpath):
-		history = self.db.find_one({'key': key})['history']
+		historyTimestamps = self.db.find_one({'key': key})['history']
 		xpathHistory = {}
-		for point in history:
-			if not point:
-				break
-			xpathData = json.loads(open(f"static/snapshots/{key}/xpath.{point}.json").read())
+		for ts in historyTimestamps:
+			xpathData = json.loads(open(f"static/snapshots/{key}/xpath.{ts}.json").read())
 			if xpath in xpathData['xpath']:
-				xpathHistory[point] = xpathData['xpath'][xpath]['text']
+				xpathHistory[ts] = xpathData['xpath'][xpath]['text']
 			else:
-				xpathHistory[point] = None
+				xpathHistory[ts] = None
 		return xpathHistory
