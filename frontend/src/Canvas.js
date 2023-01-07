@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { getImageSize } from 'react-image-size'
-import { Modal, ToggleButton, ToggleButtonGroup } from 'react-bootstrap'
+import { Modal, ToggleButton, ToggleButtonGroup, Button } from 'react-bootstrap'
 import { browserHistory } from 'react-router'
 import 'bootstrap/dist/css/bootstrap.min.css';
 import $ from "jquery"
@@ -9,6 +9,9 @@ import moment from 'moment'
 import numeral from 'numeral'
 import * as Diff from 'diff';
 import Plot from 'react-plotly.js';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import QuickPinchZoom, { make3dTransformValue } from "react-quick-pinch-zoom";
 
 var key = null;
 // reset every time when react component loaded
@@ -25,11 +28,6 @@ var orig_img_h;
 var showModal;
 var clickedXpath = null;
 
-function resetUserScale()
-{
-    var appliedScale = 1 - Math.random()*0.01;
-    $('meta[name="viewport"]').attr('content', "width=device-width, initial-scale=" + appliedScale);
-}
 
 function findHoveredXpath(e)
 {
@@ -205,6 +203,7 @@ function onCanvasClicked(e)
     if (state_clicked) {
         clearSelection();
         clickedXpath = null
+        clearToasts()
         return;
     }
 
@@ -216,12 +215,27 @@ function onCanvasClicked(e)
 
     clickedXpath = hoveredXpath
     drawClickedXpath(hoveredXpath)
+    showOpenModalToast()
+}
 
+function clearToasts()
+{
+    toast.dismiss()
+}
+
+function showOpenModalToast()
+{
+    clearToasts()
+    toast(<Toast />, {autoClose: false});
+}
+
+function openModalFromToast() 
+{
     $.get({
         url: "/history",
         data: {
             "key": key,
-            "xpath": hoveredXpath
+            "xpath": clickedXpath
         }
     }).done(function (data) {
         showDataGraph(data);
@@ -230,7 +244,8 @@ function onCanvasClicked(e)
 
 function resizeView() 
 {
-    var canvasWidth = canvas.getBoundingClientRect().width;
+    // parent because outer component for pinch zoom used - actual boundings belongs to him
+    var canvasWidth = canvas.parentElement.getBoundingClientRect().width;
     scale = canvasWidth / selector_data['browser_width'];
 
     // make the canvas the same size as the image 
@@ -252,7 +267,6 @@ function clearSelection()
 const onPictureLoaded = (width, height) => {
     orig_img_w = width
     orig_img_h = height
-    canvas = document.getElementById("canvas")
     xctx = canvas.getContext("2d");
     ctx = canvas.getContext("2d");
 
@@ -318,6 +332,14 @@ const Graph = ({data}) => {
     );
 }
 
+const Toast = () => {
+    return (
+        <div className="d-grid gap-2">
+            <Button onClick={openModalFromToast}>Explore this element 🚀</Button>
+        </div>
+    )
+}
+
 const ModalWindow = () => {
     const [fullscreen, setFullscreen] = useState(true);
     const [show, setShow] = useState(false);
@@ -335,7 +357,7 @@ const ModalWindow = () => {
     }
 
     return (
-        <Modal show={show} fullscreen={fullscreen} onHide={() => setShow(false)} onShow={resetUserScale}>
+        <Modal show={show} fullscreen={fullscreen} onHide={() => setShow(false)}>
             <Modal.Header closeButton>
                 <Modal.Title>
                     <ToggleButtonGroup type="radio" name="options" value={graphData.is_numeral ? 2 : 1}>
@@ -361,13 +383,26 @@ const CanvasStyles = (url) => {
     }
 }
 
+const SnapshotLoadingScreen = () => {
+    return (
+        <div className="ui active dimmer">
+            <div className="ui massive text loader">Wait some time, page will be available soon.</div>
+        </div>
+    )
+}
+
 const Canvas = () => {
     const [styles, setStyles] = useState({})
     const [snapshotExists, setSnapshotExists] = useState(true);
+    const canvasRef = useRef();
     key = useParams().key;
+
+    // reset every time on component loads
     state_clicked = false
-    // call after component loaded
+
+    // called after component loaded
     useEffect(() => {
+        canvas = canvasRef.current
         fetch("/latest/"+key).then(res => res.json()).then((latest) => {
             if (!latest.xpath || !latest.img){
                 setSnapshotExists(false)
@@ -380,15 +415,26 @@ const Canvas = () => {
             }
         });
     }, []);
+
+    const onCanvasPinchZoom = useCallback(({ x, y, scale }) => {
+        if (canvas) {
+            const value = make3dTransformValue({ x, y, scale });
+            canvas.style.setProperty("transform", value);
+        }
+      }, []);
+
     return (
         <div className="ui container">
-            <ModalWindow />
-            {!snapshotExists && (
-                <div className="ui active dimmer">
-                    <div class="ui massive text loader">Wait some time, page will be available soon.</div>
-                </div>
+            {!snapshotExists && <SnapshotLoadingScreen />}
+            {snapshotExists && (
+                <>
+                    <QuickPinchZoom onUpdate={onCanvasPinchZoom}>
+                        <canvas id="canvas" ref={canvasRef} style={styles}></canvas>
+                    </QuickPinchZoom>
+                    <ModalWindow />
+                    <ToastContainer />
+                </>
             )}
-            {snapshotExists && <canvas id="canvas" style={styles}></canvas>}
         </div>
     )
 }

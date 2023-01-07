@@ -3,7 +3,6 @@
 - keep cookies for popular web sites
 - timer-based scrapping (30m, 1h, 5h, 24h)
 - look at history snapshots
-- on canvas click: do not open modal right away, ask user if he wants to over small popup
 - spread fetching by domain name frequency 
 	- use proxy if too fast even after spreading
 	- use domain db with `domain` and `last_fetch` fields
