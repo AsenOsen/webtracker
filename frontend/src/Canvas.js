@@ -23,6 +23,7 @@ var selector_data;
 var orig_img_w;
 var orig_img_h;
 var showModal;
+var clickedXpath = null;
 
 function resetUserScale()
 {
@@ -76,16 +77,6 @@ function drawSelectedXpath(hoveredXpath)
             element.width * scale, element.height * scale
             );
     }  
-}
-
-function onCanvasMove(e)
-{
-    if (state_clicked) {
-        return;
-    }
-
-    clearSelection();
-    drawSelectedXpath(findHoveredXpath(e));
 }
 
 function setGraphType(data, isNumeral)
@@ -183,11 +174,37 @@ function showDataGraph(data)
     showModal(setGraphType(chartData, isDigitalGraph))
 }
 
+function onCanvasMove(e)
+{
+    if (state_clicked) {
+        return;
+    }
+
+    clearSelection();
+    drawSelectedXpath(findHoveredXpath(e));
+}
+
+function drawClickedXpath(hoveredXpath)
+{
+    if(hoveredXpath) {
+        drawSelectedXpath(hoveredXpath);
+        var sel = selector_data['xpath'][hoveredXpath];
+        xctx.fillStyle = 'rgba(205,205,205,0.95)';
+        xctx.strokeStyle = 'rgba(225,0,0,0.9)';
+        xctx.lineWidth = 1;
+        xctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Clear out what only should be seen (make a clear/clean spot)
+        xctx.clearRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
+        xctx.strokeRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
+        state_clicked = true;
+    }
+}
 
 function onCanvasClicked(e) 
 {
     if (state_clicked) {
         clearSelection();
+        clickedXpath = null
         return;
     }
 
@@ -197,17 +214,8 @@ function onCanvasClicked(e)
         return;
     }
 
-    drawSelectedXpath(hoveredXpath);
-
-    var sel = selector_data['xpath'][hoveredXpath];
-    xctx.fillStyle = 'rgba(205,205,205,0.95)';
-    xctx.strokeStyle = 'rgba(225,0,0,0.9)';
-    xctx.lineWidth = 1;
-    xctx.fillRect(0, 0, canvas.width, canvas.height);
-    // Clear out what only should be seen (make a clear/clean spot)
-    xctx.clearRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
-    xctx.strokeRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
-    state_clicked = true;
+    clickedXpath = hoveredXpath
+    drawClickedXpath(hoveredXpath)
 
     $.get({
         url: "/history",
@@ -251,6 +259,7 @@ const onPictureLoaded = (width, height) => {
     $(window).resize(function () {
         clearSelection();
         resizeView();
+        drawClickedXpath(clickedXpath)
     });
 
     resizeView();
