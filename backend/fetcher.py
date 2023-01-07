@@ -2,6 +2,8 @@ from playwright.sync_api import sync_playwright
 from storage import Storage, Site
 import datetime
 import time
+import urllib
+import cookiejar
 
 
 class Fetcher:
@@ -14,9 +16,14 @@ class Fetcher:
 	def __init__(self):
 		self.xpathjs = open("xpath.js").read()
 		self.storage = Storage()
+		self.cookies = cookiejar.Cookies()
 
 	def defaultLocale(self):
 		return 'en-US,en;q=0.9'
+
+	def getCookies(self, url):
+		domain = urllib.parse.urlparse(url).netloc
+		return [{'domain': domain, 'path': '/', 'name': key, 'value': value} for key, value in self.cookies.get(domain).items()]
 
 	def createPage(self, site, browser):
 		context = browser.new_context(
@@ -26,11 +33,13 @@ class Fetcher:
 	    	service_workers='block',
 	    	accept_downloads=False
 	    )
+		context.add_cookies(self.getCookies(site.url))
 		page = context.new_page()
+		page.set_viewport_size({"width": 1280, "height": 1024})
 		page.set_default_navigation_timeout(self.BROWSER_TIMEOUT_SEC * 1000)
 		page.set_default_timeout(self.BROWSER_TIMEOUT_SEC * 1000)
 		#page.on("console", lambda msg: print(f"Playwright console: {msg.type}: {msg.text} {msg.args}"))
-		return page, context	    
+		return page, context	   
 
 	def load(self, sites):
 		with sync_playwright() as p:

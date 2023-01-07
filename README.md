@@ -13,6 +13,7 @@
 # UI
 
 - back click in graph view -> close graph
+- text of selected element in toast
 
 # Bugs
 
