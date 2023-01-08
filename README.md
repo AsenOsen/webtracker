@@ -1,6 +1,7 @@
 # ToDo
 
 - keep cookies for popular web sites
+	- update cookie after page load
 - timer-based scrapping (30m, 1h, 5h, 24h)
 - look at history snapshots
 - spread fetching by domain name frequency 
@@ -12,12 +13,10 @@
 
 # UI
 
-- back click in graph view -> close graph
+- back click in graph view -> close graph (via router)
 - text of selected element in toast
 
 # Bugs
-
-- UA sometimes not used (see tiktok page)
 
 # Promo
 

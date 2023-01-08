@@ -31,11 +31,23 @@ class Fetcher:
 	    	user_agent=site.useragent,
 	    	bypass_csp=True,
 	    	service_workers='block',
-	    	accept_downloads=False
+	    	accept_downloads=False,
+	    	#is_mobile=True,
+	    	#has_touch=True,
+	    	extra_http_headers={
+		    	'User-Agent': site.useragent,
+		    	'Referer': site.url
+		    },
+	    	storage_state={
+	    		'cookies':self.getCookies(site.url), 
+	    		'origins': [{'origin':site.url, 'localStorage':[]}]
+	    	},
+	    	viewport={
+	    		'width': 1280, 
+	    		'height': 1024
+	    	}
 	    )
-		context.add_cookies(self.getCookies(site.url))
 		page = context.new_page()
-		page.set_viewport_size({"width": 1280, "height": 1024})
 		page.set_default_navigation_timeout(self.BROWSER_TIMEOUT_SEC * 1000)
 		page.set_default_timeout(self.BROWSER_TIMEOUT_SEC * 1000)
 		#page.on("console", lambda msg: print(f"Playwright console: {msg.type}: {msg.text} {msg.args}"))
@@ -44,6 +56,7 @@ class Fetcher:
 	def load(self, sites):
 		with sync_playwright() as p:
 		    browser = p.chromium.connect_over_cdp("ws://localhost:3000")
+		    #browser = browser = p.chromium.launch()
 		    pages = []
 		    for site in sites:
 		    	page, context = self.createPage(site, browser)
