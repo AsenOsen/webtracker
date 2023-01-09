@@ -21,7 +21,7 @@ class Storage:
 		self.mongo = MongoClient('localhost', 27017, username='root', password='example')
 		self.db = self.mongo.sites.default
 		self.db.create_index('key', unique=True)
-		#self.db.update_many({}, {'$set': {'history': []}})
+		#self.db.update_many({}, {'$set': {'history': [], 'last':None}})
 
 	def addSite(self, url, useragent, locale):
 		self.db.insert_one({
@@ -78,3 +78,6 @@ class Storage:
 			else:
 				xpathHistory[ts] = None
 		return xpathHistory
+
+if __name__ == "__main__":
+	Storage()

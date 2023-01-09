@@ -9,7 +9,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
     volumes:
-      - /root/Desktop/projs/selenium/backend/db:/data/db
+      - /root/Desktop/selenium/backend/db:/data/db
     ports:
       - 27017:27017
 

@@ -1,13 +1,3 @@
-// @file Scrape the page looking for elements of concern (%ELEMENTS%)
-// http://matatk.agrip.org.uk/tests/position-and-width/
-// https://stackoverflow.com/questions/26813480/when-is-element-getboundingclientrect-guaranteed-to-be-updated-accurate
-//
-// Some pages like https://www.londonstockexchange.com/stock/NCCL/ncondezi-energy-limited/analysis
-// will automatically force a scroll somewhere, so include the position offset
-// Lets hope the position doesnt change while we iterate the bbox's, but this is better than nothing
-
-var ELEMENTS = 'div,span,form,table,tbody,tr,td,a,p,ul,li,h1,h2,h3,h4,header,footer,section,article,aside,details,main,nav,section,summary,strong,dd,dt,dl,input,nobr';
-
 // Include the getXpath script directly, easier than fetching
 function getxpath(e) {
         var n = e;
@@ -74,8 +64,7 @@ function xpath_start() {
     var root = document.documentElement || document.body;
     var scroll_y = root ? root.scrollTop : 0;
     // @todo - if it's SVG or IMG, go into image diff mode
-    // %ELEMENTS% replaced at injection time because different interfaces use it with different settings
-    var elements = window.document.querySelectorAll(ELEMENTS);
+    var elements = window.document.querySelectorAll('*');
     var size_pos = {};
     var geometryFingerprint = '';
     // after page fetch, inject this JS
@@ -140,13 +129,16 @@ function xpath_start() {
         var h = Math.round(bbox['height']);
         var l = Math.floor(bbox['left']);
         var t = Math.floor(bbox['top'])+scroll_y;
-        size_pos[xpath_result] = {
-            width: w,
-            height: h,
-            left: l,
-            top: t,
-            text: elements[i].innerText || elements[i].value
-        };
+        var text = (elements[i].innerText || elements[i].value || elements[i].title || "").trim()
+        if (text.length > 0) {
+            size_pos[xpath_result] = {
+                w: w,
+                h: h,
+                l: l,
+                t: t,
+                text: text
+            };
+        }
         // TODO: also we could add "text" into fingerprint, but it requires to determine first what is better:
         // wait for dynamic content (more frequent case therefore can be endless) or wait for dynamic geometry (less frequent case) 
         geometryFingerprint += xpath_result+":"+w+":"+h+":"+l+":"+t+";";

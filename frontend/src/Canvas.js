@@ -48,13 +48,13 @@ function findHoveredXpath(e)
     for (var xpath in selector_data['xpath']) {
         var sel = selector_data['xpath'][xpath];
         var intersected = 
-            (y > sel.top * scale && y < sel.top * scale + sel.height * scale) 
+            (y > sel.t * scale && y < sel.t * scale + sel.h * scale) 
             && 
-            (x > sel.left * scale && x < sel.left * scale + sel.width * scale);
-        var lessSquare = sel.width * sel.height < min_square;
+            (x > sel.l * scale && x < sel.l * scale + sel.w * scale);
+        var lessSquare = sel.w * sel.h < min_square;
         if (intersected && lessSquare) {
             hoveredElementXpath = xpath;
-            min_square = sel.width * sel.height;
+            min_square = sel.w * sel.h;
         }
     }
 
@@ -67,12 +67,12 @@ function drawSelectedXpath(hoveredXpath)
 
     if(element) {
         ctx.strokeRect(
-            element.left * scale, element.top * scale, 
-            element.width * scale, element.height * scale
+            element.l * scale, element.t * scale, 
+            element.w * scale, element.h * scale
             );
         ctx.fillRect(
-            element.left * scale, element.top * scale, 
-            element.width * scale, element.height * scale
+            element.l * scale, element.t * scale, 
+            element.w * scale, element.h * scale
             );
     }  
 }
@@ -192,8 +192,8 @@ function drawClickedXpath(hoveredXpath)
         xctx.lineWidth = 1;
         xctx.fillRect(0, 0, canvas.width, canvas.height);
         // Clear out what only should be seen (make a clear/clean spot)
-        xctx.clearRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
-        xctx.strokeRect(sel.left * scale, sel.top * scale, sel.width * scale, sel.height * scale);
+        xctx.clearRect(sel.l * scale, sel.t * scale, sel.w * scale, sel.h * scale);
+        xctx.strokeRect(sel.l * scale, sel.t * scale, sel.w * scale, sel.h * scale);
         state_clicked = true;
     }
 }
