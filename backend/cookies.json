@@ -1,11 +1,11 @@
 {
-	"store.steampowered.com": {
-		"birthtime": "-2180000000"
-	},
-	"aliexpress.com": {
-		"aep_usuc_f": "site=glo&c_tp=AES&region=US&b_locale=en_US"
-	},
-	"instagram.com": {
-		"sessionid": "54615843181%3At5XunzUTaMkEEt%3A8%3AAYcbf5b0zk9BJ3L3GbpQdpIqBwhX-U1wxAuq2Mj5Sg"
-	}
+    "store.steampowered.com": {
+        "birthtime": "-2180000000"
+    },
+    "aliexpress.com": {
+        "aep_usuc_f": "region=US&b_locale=en_US&c_tp=USD"
+    },
+    "instagram.com": {
+        "sessionid": "54615843181%3AMzS9GnnnVXgxW0%3A7%3AAYc2UqhJ8PvqTSCIj-tBPJZdENsNvsB9mar3NYQi2XE"
+    }
 }

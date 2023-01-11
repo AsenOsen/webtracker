@@ -25,6 +25,10 @@ class Fetcher:
 		domain = urllib.parse.urlparse(url).netloc
 		return [{'domain': domain, 'path': '/', 'name': key, 'value': value} for key, value in self.cookies.get(domain).items()]
 
+	def updateCookies(self, url, cookies):
+		domain = urllib.parse.urlparse(url).netloc
+		self.cookies.set(domain, {cookie['name']:cookie['value'] for cookie in cookies})
+
 	def createPage(self, site, browser):
 		context = browser.new_context(
 	    	locale=(site.locale or self.defaultLocale()), 
@@ -95,6 +99,7 @@ class Fetcher:
 		page['ready'] = True
 		del page['xpath']['fingerprint']
 		self.storage.saveSnapshot(page['url'], page['xpath'], page['screenshot'], round(time.time()-page['start'], 2))
+		self.updateCookies(page['url'], page['ctx'].cookies())
 		page['ctx'].close()
 
 	def getNextBunch(self):

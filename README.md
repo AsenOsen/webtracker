@@ -13,6 +13,8 @@
 - remove repeated texts in element selection
 - check entire page changes button
 - fetcher sleep dependant from bunch size (should be more if 1-2 sites)
+- UTC to local time on graph
+- onmouseout from canvas, clear canvas
 
 # UI
 
