@@ -17,6 +17,8 @@ class Cookies:
 	def set(self, domain, cookies):
 		if domain.startswith("www."):
 			domain = domain.replace("www.", "")
+		if domain not in self.cookiesByDomains:
+			return
 		changed = False
 		for cookieName in self.cookiesByDomains[domain]:
 			# update only known cookies
