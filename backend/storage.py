@@ -29,7 +29,8 @@ class Storage:
 			"url": url,
 			'lc': locale,
 			"ua": useragent,
-			'last': None
+			'last': None,
+			'history': []
 			})
 
 	def updateAfterSnapshot(self, key, ts:int, secondsTook):
@@ -60,13 +61,15 @@ class Storage:
 		open(f"static/snapshots/{key}/screenshot.{ts}.jpg","wb").write(screenshot)
 		self.updateAfterSnapshot(key, ts, secondsTook)
 
-	def latestSnapshot(self, key):
-		latestTs = self.db.find_one({'key': key})['last']
-		if latestTs:
-			xpath = json.loads(open(f"static/snapshots/{key}/xpath.{latestTs}.json").read())
-			screenshot = f"/static/snapshots/{key}/screenshot.{latestTs}.jpg"
-			return [xpath, screenshot]
-		return [None, None]
+	def getSnapshot(self, key, offset):
+		history = self.db.find_one({'key': key})['history']
+		if len(history) == 0:
+			return [None, None, None]
+		hlen = len(history)
+		ts = history[(hlen-1-offset) % hlen]
+		xpath = json.loads(open(f"static/snapshots/{key}/xpath.{ts}.json").read())
+		screenshot = f"/static/snapshots/{key}/screenshot.{ts}.jpg"
+		return [xpath, screenshot, ts]	
 
 	def getXpathHistory(self, key, xpath):
 		historyTimestamps = self.db.find_one({'key': key})['history']

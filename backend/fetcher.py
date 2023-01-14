@@ -60,7 +60,7 @@ class Fetcher:
 	def load(self, sites):
 		with sync_playwright() as p:
 		    browser = p.chromium.connect_over_cdp("ws://localhost:3000")
-		    #browser = browser = p.chromium.launch()
+		    #browser = browser = p.firefox.launch()
 		    pages = []
 		    for site in sites:
 		    	page, context = self.createPage(site, browser)

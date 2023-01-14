@@ -9,10 +9,11 @@ def urls():
 	sites = {site.key:site.url for site in storage.getSites()}
 	return jsonify(sites)
 
-@app.route('/latest/<key>')
-def latest(key):
-	xpath, screen = storage.latestSnapshot(key)
-	return jsonify({'xpath':xpath, 'img':screen})
+@app.route('/snapshot/<key>', methods = ["GET"])
+def snapshot(key):
+	offset = int(request.args.get('offset'))
+	xpath, screen, ts = storage.getSnapshot(key, offset)
+	return jsonify({'xpath':xpath, 'img':screen, 'ts': ts})
 
 @app.route('/history')
 def history():

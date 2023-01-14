@@ -3,30 +3,29 @@ import { useParams } from 'react-router-dom'
 import { getImageSize } from 'react-image-size'
 import { Modal, ToggleButton, ToggleButtonGroup, Button } from 'react-bootstrap'
 import { browserHistory } from 'react-router'
-import 'bootstrap/dist/css/bootstrap.min.css';
+import Plot from 'react-plotly.js';
+import QuickPinchZoom, { make3dTransformValue } from "react-quick-pinch-zoom";
+import { ToastContainer, toast } from 'react-toastify';
 import $ from "jquery"
 import moment from 'moment'
 import numeral from 'numeral'
+import axios from 'axios'
 import * as Diff from 'diff';
-import Plot from 'react-plotly.js';
-import { ToastContainer, toast } from 'react-toastify';
+import 'bootstrap/dist/css/bootstrap.min.css';
 import 'react-toastify/dist/ReactToastify.css';
-import QuickPinchZoom, { make3dTransformValue } from "react-quick-pinch-zoom";
 
-var key = null;
-// reset every time when react component loaded
-var state_clicked = false;
-var canvas;
-// greyed out fill context
-var xctx;
-// redline highlight context
-var ctx;
-var scale = 1;
-var selector_data;
-var orig_img_w;
-var orig_img_h;
-var showModal;
-var clickedXpath = null;
+var gSnapshotKey = null;
+var gStateClicked = false;
+var gCanvas;
+var gGrayCtx;
+var gRedCtx;
+var gScale = 1;
+var gSelectorXpath;
+var gOrigImgWidth;
+var gOrigImgHeight;
+var gShowModalFunc;
+var gSnapshotOffset;
+var gClickedXpath = null;
 
 
 function findHoveredXpath(e)
@@ -44,13 +43,13 @@ function findHoveredXpath(e)
     // the smallest possible square
     var hoveredElementXpath = null;
     var min_square = Infinity;
-    ctx.fillStyle = 'rgba(205,0,0,0.35)';
-    for (var xpath in selector_data['xpath']) {
-        var sel = selector_data['xpath'][xpath];
+    gRedCtx.fillStyle = 'rgba(205,0,0,0.35)';
+    for (var xpath in gSelectorXpath['xpath']) {
+        var sel = gSelectorXpath['xpath'][xpath];
         var intersected = 
-            (y > sel.t * scale && y < sel.t * scale + sel.h * scale) 
+            (y > sel.t * gScale && y < sel.t * gScale + sel.h * gScale) 
             && 
-            (x > sel.l * scale && x < sel.l * scale + sel.w * scale);
+            (x > sel.l * gScale && x < sel.l * gScale + sel.w * gScale);
         var lessSquare = sel.w * sel.h < min_square;
         if (intersected && lessSquare) {
             hoveredElementXpath = xpath;
@@ -63,16 +62,16 @@ function findHoveredXpath(e)
 
 function drawSelectedXpath(hoveredXpath)
 {
-    var element = hoveredXpath ? selector_data['xpath'][hoveredXpath] : null;
+    var element = hoveredXpath ? gSelectorXpath['xpath'][hoveredXpath] : null;
 
     if(element) {
-        ctx.strokeRect(
-            element.l * scale, element.t * scale, 
-            element.w * scale, element.h * scale
+        gRedCtx.strokeRect(
+            element.l * gScale, element.t * gScale, 
+            element.w * gScale, element.h * gScale
             );
-        ctx.fillRect(
-            element.l * scale, element.t * scale, 
-            element.w * scale, element.h * scale
+        gRedCtx.fillRect(
+            element.l * gScale, element.t * gScale, 
+            element.w * gScale, element.h * gScale
             );
     }  
 }
@@ -84,6 +83,11 @@ function setGraphType(data, isNumeral)
     data.text = isNumeral ? data.labels_numeral : data.labels_changes
     data.is_numeral = isNumeral
     return data
+}
+
+function tsPrintf(ts)
+{
+    return moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm")
 }
 
 function showDataGraph(data)
@@ -99,7 +103,7 @@ function showDataGraph(data)
             continue;
         }
         // cut seconds
-        var dateTime = moment.unix(parseInt(ts)).format("DD/MM/YY HH:mm");
+        var dateTime = tsPrintf(ts)
         var yNumeral = numeral(contents).value();
         // consider number parsing succesfull only if readable digit extracted
         if(yNumeral != null && yNumeral != Infinity && !isNaN(yNumeral)){
@@ -170,51 +174,51 @@ function showDataGraph(data)
     }
 
     //console.log(chartData);
-    showModal(setGraphType(chartData, isDigitalGraph))
+    gShowModalFunc(setGraphType(chartData, isDigitalGraph))
 }
 
 function onCanvasMove(e)
-{
-    if (state_clicked) {
+{ 
+    if (gStateClicked) {
         return;
     }
 
     clearSelection();
-    drawSelectedXpath(findHoveredXpath(e));
+    drawSelectedXpath(findHoveredXpath(e.nativeEvent));
 }
 
 function drawClickedXpath(hoveredXpath)
 {
     if(hoveredXpath) {
         drawSelectedXpath(hoveredXpath);
-        var sel = selector_data['xpath'][hoveredXpath];
-        xctx.fillStyle = 'rgba(205,205,205,0.95)';
-        xctx.strokeStyle = 'rgba(225,0,0,0.9)';
-        xctx.lineWidth = 1;
-        xctx.fillRect(0, 0, canvas.width, canvas.height);
+        var sel = gSelectorXpath['xpath'][hoveredXpath];
+        gGrayCtx.fillStyle = 'rgba(205,205,205,0.95)';
+        gGrayCtx.strokeStyle = 'rgba(225,0,0,0.9)';
+        gGrayCtx.lineWidth = 1;
+        gGrayCtx.fillRect(0, 0, gCanvas.width, gCanvas.height);
         // Clear out what only should be seen (make a clear/clean spot)
-        xctx.clearRect(sel.l * scale, sel.t * scale, sel.w * scale, sel.h * scale);
-        xctx.strokeRect(sel.l * scale, sel.t * scale, sel.w * scale, sel.h * scale);
-        state_clicked = true;
+        gGrayCtx.clearRect(sel.l * gScale, sel.t * gScale, sel.w * gScale, sel.h * gScale);
+        gGrayCtx.strokeRect(sel.l * gScale, sel.t * gScale, sel.w * gScale, sel.h * gScale);
+        gStateClicked = true;
     }
 }
 
 function onCanvasClicked(e) 
 {
-    if (state_clicked) {
+    if (gStateClicked) {
         clearSelection();
-        clickedXpath = null
+        gClickedXpath = null
         clearToasts()
         return;
     }
 
-    var hoveredXpath = findHoveredXpath(e);
+    var hoveredXpath = findHoveredXpath(e.nativeEvent);
     if(!hoveredXpath) {
         console.log("No element found under mouse click coordinates");
         return;
     }
 
-    clickedXpath = hoveredXpath
+    gClickedXpath = hoveredXpath
     drawClickedXpath(hoveredXpath)
     showOpenModalToast()
 }
@@ -235,8 +239,8 @@ function openModalFromToast()
     $.get({
         url: "/history",
         data: {
-            "key": key,
-            "xpath": clickedXpath
+            "key": gSnapshotKey,
+            "xpath": gClickedXpath
         }
     }).done(function (data) {
         showDataGraph(data);
@@ -246,40 +250,38 @@ function openModalFromToast()
 function resizeView() 
 {
     // parent because outer component for pinch zoom used - actual boundings belongs to him
-    var canvasWidth = canvas.parentElement.getBoundingClientRect().width;
-    scale = canvasWidth / selector_data['browser_width'];
+    var canvasWidth = gCanvas.parentElement.getBoundingClientRect().width;
+    gScale = canvasWidth / gSelectorXpath['browser_width'];
 
     // make the canvas the same size as the image 
     // required to set in pixels - otherwise canvas will have strange scale on drawing
-    $(canvas).attr('height', orig_img_h * scale);
-    $(canvas).attr('width', canvasWidth);
+    $(gCanvas).attr('height', gOrigImgHeight * gScale);
+    $(gCanvas).attr('width', canvasWidth);
 
-    ctx.strokeStyle = 'rgba(255,0,0, 0.9)';
-    ctx.fillStyle = 'rgba(255,0,0, 0.1)';
-    ctx.lineWidth = 1;
+    gRedCtx.strokeStyle = 'rgba(255,0,0, 0.9)';
+    gRedCtx.fillStyle = 'rgba(255,0,0, 0.1)';
+    gRedCtx.lineWidth = 1;
 }
 
 function clearSelection()
 {
-    state_clicked = false;
-    xctx.clearRect(0, 0, canvas.width, canvas.height);
+    gStateClicked = false;
+    gGrayCtx.clearRect(0, 0, gCanvas.width, gCanvas.height);
 }
 
 const onPictureLoaded = (width, height) => {
-    orig_img_w = width
-    orig_img_h = height
-    xctx = canvas.getContext("2d");
-    ctx = canvas.getContext("2d");
+    gOrigImgWidth = width
+    gOrigImgHeight = height
+    gGrayCtx = gCanvas.getContext("2d");
+    gRedCtx = gCanvas.getContext("2d");
 
     $(window).resize(function () {
         clearSelection();
         resizeView();
-        drawClickedXpath(clickedXpath)
+        drawClickedXpath(gClickedXpath)
     });
 
     resizeView();
-    $(canvas).bind('mousemove', onCanvasMove);
-    $(canvas).bind('click', onCanvasClicked);
 }
 
 const ChangesTableRow = ({change}) => {
@@ -395,7 +397,7 @@ const ModalWindow = () => {
     const [show, setShow] = useState(false);
     const [graphData, setGraphData] = useState({})
 
-    showModal = (graphData) => {
+    gShowModalFunc = (graphData) => {
         const values = [true, 'sm-down', 'md-down', 'lg-down', 'xl-down', 'xxl-down'];
         setGraphData(graphData);
         setFullscreen(true);
@@ -444,46 +446,77 @@ const SnapshotLoadingScreen = () => {
 const Canvas = () => {
     const [styles, setStyles] = useState({})
     const [snapshotExists, setSnapshotExists] = useState(true);
+    const [snapshotTime, setSnapshotTime] = useState(0);
     const canvasRef = useRef();
-    key = useParams().key;
+    gSnapshotKey = useParams().key;
 
-    // reset every time on component loads
-    state_clicked = false
+    const setupSnapshot = (snapshot) => {
+        if (!snapshot.xpath || !snapshot.img){
+            setSnapshotExists(false)
+        } else {
+            gSelectorXpath = snapshot.xpath;
+            setSnapshotTime(snapshot.ts)
+            setStyles(styles => ({...CanvasStyles(snapshot.img)}))
+            getImageSize(snapshot.img).then(({ width, height }) => {
+                onPictureLoaded(width, height);
+            });
+        }
+    }
+
+    const loadSnapshot = () => {
+        axios.get("/snapshot/"+gSnapshotKey, {params: {offset: gSnapshotOffset}}).then((latest) => {
+            setupSnapshot(latest.data)
+        });
+    }
+
+    const previousSnapshot = () => {
+        gSnapshotOffset++
+        loadSnapshot()
+    }
+
+    const nextSnapshot = () => {
+        gSnapshotOffset--
+        loadSnapshot()
+    }
+
+    const onCanvasPinchZoom = useCallback(({ x, y, scale }) => {
+        if (gCanvas) {
+            const value = make3dTransformValue({ x, y, scale });
+            gCanvas.style.setProperty("transform", value);
+        }
+    }, []);
 
     // called after component loaded
     useEffect(() => {
-        canvas = canvasRef.current
-        fetch("/latest/"+key).then(res => res.json()).then((latest) => {
-            if (!latest.xpath || !latest.img){
-                setSnapshotExists(false)
-            } else {
-                selector_data = latest.xpath;
-                setStyles(styles => ({...CanvasStyles(latest.img)}))
-                getImageSize(latest.img).then(({ width, height }) => {
-                    onPictureLoaded(width, height);
-                });
-            }
-        });
-    }, []);
+        // reset every time on component loads
+        gStateClicked = false
+        gSnapshotOffset = 0
 
-    const onCanvasPinchZoom = useCallback(({ x, y, scale }) => {
-        if (canvas) {
-            const value = make3dTransformValue({ x, y, scale });
-            canvas.style.setProperty("transform", value);
-        }
-      }, []);
+        gCanvas = canvasRef.current
+        loadSnapshot()
+        console.log('loaded')
+    }, []);
 
     return (
         <div className="ui container">
             {!snapshotExists && <SnapshotLoadingScreen />}
             {snapshotExists && (
-                <>
+                <div>
+                    <table className="ui fluid table">
+                        <tbody>
+                            <tr>
+                                <td><div className="d-grid gap-2"><Button onClick={previousSnapshot}>Prev</Button></div></td>
+                                <td><div className="d-grid gap-2"><Button onClick={nextSnapshot}>Next</Button></div></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div className="ui center aligned header">{tsPrintf(snapshotTime)}</div>
                     <QuickPinchZoom onUpdate={onCanvasPinchZoom}>
-                        <canvas id="canvas" ref={canvasRef} style={styles}></canvas>
+                        <canvas id="canvas" ref={canvasRef} style={styles} onMouseMove={onCanvasMove} onClick={onCanvasClicked}></canvas>
                     </QuickPinchZoom>
                     <ModalWindow />
                     <ToastContainer />
-                </>
+                </div>
             )}
         </div>
     )
