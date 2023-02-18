@@ -19,6 +19,8 @@ How to run:
 - run backend app (not listed in compose file yet)
 - run headless browser  (not listed in compose file yet)
 
+# Features
+
 Sites List:
 
 ![Sites List](pics/start.png)
