@@ -4,6 +4,8 @@ This is an advanced tool to monitor each web-page element history on any web sit
 You can track history of any element as tendency or as simple changes history.     
 This is the MVP (dirty one), but I dont sure, if i will proceed developing it.  
 
+Contact me if you need any help: https://t.me/AseN_17
+
 Technological stack behind: 
 
 - Python/Flask
